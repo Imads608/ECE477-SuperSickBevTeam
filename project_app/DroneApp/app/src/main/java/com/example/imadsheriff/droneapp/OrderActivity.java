@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
 import java.util.*;
+import android.location.*;
 
 public class OrderActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemSelectedListener {
     private Button btnInstructions, btnPlaceOrder, btnCancelOrder, btnCheckOrder;
@@ -14,6 +15,8 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     private EditText editIP, editPortNum;
     private boolean isOrderPlaced = false;
     private String orderPlaced;//"--Select Drink--";
+    private String latString = "";
+    private String longString = "";
 
 
     @Override
@@ -57,6 +60,46 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
 
     }
 
+    public void getGPSCoordinates() {
+        // Acquire a reference to the system Location Manager
+        LocationManager locationManager = (LocationManager) this.getSystemService(android.content.Context.LOCATION_SERVICE);
+        // Define a listener that responds to location updates
+        LocationListener locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                // Called when a new location is found by the network location provider.
+                latString = Double.toString(location.getLatitude());
+                longString = Double.toString(location.getLongitude());
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+            public void onProviderEnabled(String provider) {}
+            public void onProviderDisabled(String provider) {}
+        };
+        // Register the listener with the Location Manager to receive location updates
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+
+        return;
+    }
+
+    public void clientSetup() {
+        Client myClient = new Client(editIP.getText().toString(), Integer.parseInt(editPortNum.getText().toString()));
+        String messageSend = "Check " + orderPlaced;
+        String[] sendArray = {messageSend, latString, longString};
+        myClient.execute(sendArray);
+
+        /*
+        if (!myClient.status.equals("") && myClient.status.equals("Connection Accepted")) {
+            showAlert("Host Connection", "Connection Accepted");
+        } else if (myClient.status.equals("In Stock")) {
+            showAlert("ALERT", "Drink in stock. Order is on its way");
+            isOrderPlaced = true;
+        } else if (myClient.status.equals("Not in stock")) {
+            showAlert("ALERT", "Drink not in stock. Order a different drink");
+            isOrderPlaced = false;
+        }*/
+        return;
+    }
+
     public void checkOrderStatus() {
         if (isOrderPlaced == false) {
             showAlert("Current Order", "You don't have any orders placed!");
@@ -81,6 +124,7 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             showAlert("ALERT!", "You can only place one order at a time");
             return;
         }
+        /*
         if (orderPlaced.equals("--Select Drink--")) {
             showAlert("ALERT!", "Please select a drink");
             return;
@@ -96,8 +140,10 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             showAlert("ALERT!", "Please enter a valid Port Number");
             return;
         }
-        isOrderPlaced = true;
-        showAlert("ALERT", "Your order is on its way.\nThanks for using our service!");
+        isOrderPlaced = true;*/
+        getGPSCoordinates();
+        clientSetup();
+        //showAlert("ALERT", "Your order is on its way.\nThanks for using our service!");
     }
 
     public void showAlert(String title, String message) {
