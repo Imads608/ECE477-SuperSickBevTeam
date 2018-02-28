@@ -4,11 +4,11 @@ const char* ssid = "esp-test";
 const char* password = "Hello There";
 
 // Drinks Available
-int numCoke = 5;
-int numMelloYello = 1;
+int numCoke = 100;
+int numMelloYello = 1000;
 int numRootBeer = 0;
 int numFanta = 0;
-int numSprite = 2;
+int numSprite = 120;
 
 
 // Create an instance of the server
@@ -84,61 +84,70 @@ void loop() {
   Serial.print("Request: ");
   Serial.println(req);
 
-  Serial.print("Request Length: ");
-  Serial.println(req.length());
+  //Serial.print("Request Length: ");
+  //Serial.println(req.length());
   int startIndex = 2;
   int flag = 0;
   int temp = 0;
   
   // Match the request
   for (temp = 0; temp < req.length(); temp++) {
-    Serial.print(temp);
-    Serial.print(": ");
-    Serial.println(req[temp]);
+    //Serial.print(temp);
+    //Serial.print(": ");
+    //Serial.println(req[temp]);
     if (req[temp] == 'C' && flag == 0) {
       startIndex = temp;
       flag = 1;
-      Serial.print("Start Index: ");
-      Serial.println(temp);
+      //Serial.print("Start Index: ");
+      //Serial.println(temp);
     }
   }
   String compare = String(req.substring(startIndex, req.length()));
-  Serial.print("compare: ");
-  Serial.println(compare);
+  //Serial.print("compare: ");
+  //Serial.println(compare);
   
-  
+  /*
   for (temp = 0; temp < compare.length(); temp++) {
     Serial.print(temp);
     Serial.print(": ");
     Serial.println(compare[temp]);
-  }
+  }*/
   
   String sendBack = "Not Available";
   if (compare.equals("Check Coca Cola")) {
     if (numCoke > 0) {
       sendBack = "Available";
       numCoke = numCoke - 1;
+      Serial.print("Cokes left: ");
+      Serial.println(numCoke);
     }
   } else if (compare.equals("Check Mello Yello")) {
     if (numMelloYello > 0) {
       sendBack = "Available";
       numMelloYello = numMelloYello - 1;
+      Serial.print("Mello Yellos left: ");
+      Serial.println(numMelloYello);
     }
   } else if (compare.equals("Check Root Beer")) {
-    Serial.println("Found MATCH");
     if (numRootBeer > 0) {
       sendBack = "Available"; 
       numRootBeer = numRootBeer - 1;
+      Serial.print("Root Beers left: ");
+      Serial.println(numRootBeer);
     }
   } else if (compare.equals("Check Fanta")) {
     if (numFanta > 0) {
       sendBack = "Available";
       numFanta = numFanta - 1;
+      Serial.print("Fantas left: ");
+      Serial.println(numFanta);
     }
   } else if (compare.equals("Check Sprite")) {
     if (numSprite > 0) {
       sendBack = "Available";
       numSprite = numSprite - 1;
+      Serial.print("Sprites left: ");
+      Serial.println(numSprite);
     }
   }
 
@@ -154,15 +163,18 @@ void loop() {
   if (sendBack.equals("Available")) {
 
     while(!client.available()){
-    delay(1);
-  }
-    req = client.readStringUntil('\r');
-    Serial.print("GPS: ");
-    Serial.println(req);
+      delay(1);
+    }
+    String newreq = client.readString();
     client.flush();
+    Serial.print("GPS: ");
+    Serial.println(newreq);
+    
 
     // Send response to client
     client.print("Delivering Order");
+
+    Serial.println("Sending Order");
   }
   
   delay(1);

@@ -14,15 +14,18 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     private Spinner spnDrinks;
     private EditText editIP, editPortNum;
     private boolean isOrderPlaced = false;
-    private String orderPlaced;//"--Select Drink--";
+    private String orderPlaced = "";//"--Select Drink--";
     private String latString = "";
     private String longString = "";
-
+    private boolean isLocationOn = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_order);
+        //while (latString == "" && longString == "") {
+        getGPSCoordinates();
+        //}
         init();
     }
 
@@ -60,9 +63,38 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
 
     }
 
+    public boolean checkLocationEnabled(LocationManager lm) {
+        boolean gps_enabled = false;
+        boolean network_enabled = false;
+
+        try {
+            gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        } catch(Exception ex) {}
+
+        try {
+            network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        } catch(Exception ex) {}
+
+        if(!gps_enabled || !network_enabled) {
+            return false;
+        } else {
+            isLocationOn = true;
+        }
+
+        return true;
+    }
+
+    public void setOrderPlaced(boolean value) {
+        isOrderPlaced = value;
+    }
+
     public void getGPSCoordinates() {
         // Acquire a reference to the system Location Manager
         LocationManager locationManager = (LocationManager) this.getSystemService(android.content.Context.LOCATION_SERVICE);
+        if (checkLocationEnabled(locationManager) == false) {
+            showAlert("Location Services", "Please turn on Location to order a drink");
+            return;
+        }
         // Define a listener that responds to location updates
         LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
@@ -77,12 +109,13 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         };
         // Register the listener with the Location Manager to receive location updates
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
 
         return;
     }
 
     public void clientSetup() {
-        Client myClient = new Client(editIP.getText().toString(), Integer.parseInt(editPortNum.getText().toString()));
+        Client myClient = new Client(this, editIP.getText().toString(), Integer.parseInt(editPortNum.getText().toString()));
         String messageSend = "Check " + orderPlaced;
         String[] sendArray = {messageSend, latString, longString};
         myClient.execute(sendArray);
@@ -124,26 +157,13 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             showAlert("ALERT!", "You can only place one order at a time");
             return;
         }
-        /*
-        if (orderPlaced.equals("--Select Drink--")) {
-            showAlert("ALERT!", "Please select a drink");
-            return;
-        } else if (orderPlaced.equals("Coca Cola")) {
-            showAlert("ALERT!", "This drink is not available. Please select another drink");
-            return;
+        if (isLocationOn == false) {
+            getGPSCoordinates();
+            if (isLocationOn == false) {
+                return;
+            }
         }
-        if (editIP.getText().toString().equals("")) {
-            showAlert("ALERT!", "Please enter a valid IP Address");
-            return;
-        }
-        if (editPortNum.getText().toString().equals("")) {
-            showAlert("ALERT!", "Please enter a valid Port Number");
-            return;
-        }
-        isOrderPlaced = true;*/
-        getGPSCoordinates();
         clientSetup();
-        //showAlert("ALERT", "Your order is on its way.\nThanks for using our service!");
     }
 
     public void showAlert(String title, String message) {

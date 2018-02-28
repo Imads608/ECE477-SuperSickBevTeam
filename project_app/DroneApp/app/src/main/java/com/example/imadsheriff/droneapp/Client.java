@@ -1,5 +1,6 @@
 package com.example.imadsheriff.droneapp;
 
+import android.annotation.SuppressLint;
 import android.os.AsyncTask;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -18,13 +19,14 @@ public class Client extends AsyncTask<String, Void, Void> {
 
     private String dstAddress;
     private int dstPort;
-    private String response = "";
     private String status = "";
-    private String decision = "";
 
     //TextView textResponse;
+    @SuppressLint("StaticFieldLeak")
+    public OrderActivity myOrderActivity;
 
-    Client(String addr, int port) {
+    Client(OrderActivity a, String addr, int port) {
+        this.myOrderActivity = a;
         dstAddress = addr;
         dstPort = port;
         //this.textResponse = textResponse;
@@ -38,6 +40,7 @@ public class Client extends AsyncTask<String, Void, Void> {
         String latString = pParams[1];
         String longString = pParams[2];
         String gpsCoordinates = latString + ", " + longString;
+        String response = "";
 
         try {
             socket = new Socket(dstAddress, dstPort);
@@ -68,8 +71,9 @@ public class Client extends AsyncTask<String, Void, Void> {
 
                     // Send GPS Coordinates
                     dOut.writeUTF(gpsCoordinates);
+                    dOut.flush();
 
-                  // Wait for server to accept GPS coordinates
+                    // Wait for server to accept GPS coordinates
                 } else if (response.contains("Delivering Order")) {
                     status = "Delivering";
                 }
@@ -101,12 +105,17 @@ public class Client extends AsyncTask<String, Void, Void> {
     @Override
     protected void onPostExecute(Void result) {
         //textResponse.setText(response);
-        decision = status;
+        if (status == "Delivering") {
+            myOrderActivity.showAlert("Order Update", "Your Order is on its way");
+            myOrderActivity.setOrderPlaced(true);
+        } else if (status == "Not in stock") {
+            myOrderActivity.showAlert("Order Update", "Out of Stock. Please select a different drink");
+            myOrderActivity.setOrderPlaced(false);
+        } else if (status != "Connection Accepted") {
+            myOrderActivity.showAlert("Connection Status", "Could not get a connection with drone. Please try again later");
+            myOrderActivity.setOrderPlaced(false);
+        }
+
         super.onPostExecute(result);
     }
-
-    public String getDecision() {
-        return decision;
-    }
-
 }
