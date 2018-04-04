@@ -1,23 +1,40 @@
 package com.example.imadsheriff.droneapp;
 
+import android.Manifest;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
+
 import java.util.*;
+
 import android.location.*;
 
+import pl.droidsonroids.gif.GifImageView;
+
 public class OrderActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemSelectedListener {
-    private Button btnInstructions, btnPlaceOrder, btnCancelOrder, btnCheckOrder;
+    // Widget related variables
+    private Button btnInstructions, btnPlaceOrder, btnCancelOrder, btnCheckOrder, btnUpdateStock;
+    private TextView textView3, txtLoading;
     private Spinner spnDrinks;
     private EditText editIP, editPortNum;
+    private GifImageView gifView;
+
+    // Misc related variables to keep track of meta-data
     private boolean isOrderPlaced = false;
+    private String currDrink = "";
     private String orderPlaced = "";//"--Select Drink--";
     private String latString = "";
     private String longString = "";
     private boolean isLocationOn = false;
+    private String ipAddr = "192.168.4.1";
+    private String portNum = "80";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,10 +51,14 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         btnPlaceOrder = (Button) findViewById(R.id.btnPlaceOrder);
         btnCancelOrder = (Button) findViewById(R.id.btnCancelOrder);
         btnCheckOrder = (Button) findViewById(R.id.btnCheckOrder);
-        spnDrinks = (Spinner) findViewById(R.id.spnDrinks);
+        btnUpdateStock = (Button) findViewById(R.id.btnUpdateStock);
+        spnDrinks = (Spinner) findViewById(R.id.spnChoose);
         editIP = (EditText) findViewById(R.id.editIP);
         editPortNum = (EditText) findViewById(R.id.editPortNum);
-
+        gifView = (GifImageView) findViewById(R.id.gifView);
+        textView3 = (TextView) findViewById(R.id.textView3);
+        txtLoading = (TextView) findViewById(R.id.txtView_Loading);
+        txtLoading.setVisibility(View.GONE);
         addItems(spnDrinks);
 
 
@@ -45,7 +66,13 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         btnPlaceOrder.setOnClickListener(this);
         btnCheckOrder.setOnClickListener(this);
         btnCancelOrder.setOnClickListener(this);
+        btnUpdateStock.setOnClickListener(this);
         spnDrinks.setOnItemSelectedListener(this);
+    }
+
+    public void updateStockWindow() {
+        Intent newIntent = new Intent(OrderActivity.this, StockActivity.class);
+        startActivity(newIntent);
     }
 
     public void showInstructions() {
@@ -63,19 +90,51 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
 
     }
 
+    public void setLoadingScreen() {
+        btnInstructions.setVisibility(View.GONE);
+        btnCheckOrder.setVisibility(View.GONE);
+        btnPlaceOrder.setVisibility(View.GONE);
+        btnCancelOrder.setVisibility(View.GONE);
+        btnUpdateStock.setVisibility(View.GONE);
+        textView3.setVisibility(View.GONE);
+        txtLoading.setVisibility(View.VISIBLE);
+        spnDrinks.setVisibility(View.GONE);
+        editIP.setVisibility(View.GONE);
+        editPortNum.setVisibility(View.GONE);
+
+
+        gifView.setVisibility(View.VISIBLE);
+    }
+
+    public void finishLoadingScreen() {
+        btnInstructions.setVisibility(View.VISIBLE);
+        btnCheckOrder.setVisibility(View.VISIBLE);
+        btnPlaceOrder.setVisibility(View.VISIBLE);
+        btnCancelOrder.setVisibility(View.VISIBLE);
+        btnUpdateStock.setVisibility(View.VISIBLE);
+        textView3.setVisibility(View.VISIBLE);
+        txtLoading.setVisibility(View.GONE);
+        spnDrinks.setVisibility(View.VISIBLE);
+        editIP.setVisibility(View.VISIBLE);
+        editPortNum.setVisibility(View.VISIBLE);
+        gifView.setVisibility(View.GONE);
+    }
+
     public boolean checkLocationEnabled(LocationManager lm) {
         boolean gps_enabled = false;
         boolean network_enabled = false;
 
         try {
             gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        } catch(Exception ex) {}
+        } catch (Exception ex) {
+        }
 
         try {
             network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        } catch(Exception ex) {}
+        } catch (Exception ex) {
+        }
 
-        if(!gps_enabled || !network_enabled) {
+        if (!gps_enabled || !network_enabled) {
             return false;
         } else {
             isLocationOn = true;
@@ -103,20 +162,36 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
                 longString = Double.toString(location.getLongitude());
             }
 
-            public void onStatusChanged(String provider, int status, Bundle extras) {}
-            public void onProviderEnabled(String provider) {}
-            public void onProviderDisabled(String provider) {}
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            public void onProviderEnabled(String provider) {
+            }
+
+            public void onProviderDisabled(String provider) {
+            }
         };
         // Register the listener with the Location Manager to receive location updates
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
 
         return;
     }
 
-    public void clientSetup() {
+    public void clientSetup(String messageSend) {
+        setLoadingScreen();
         Client myClient = new Client(this, editIP.getText().toString(), Integer.parseInt(editPortNum.getText().toString()));
-        String messageSend = "Check " + orderPlaced;
+        //String messageSend = "Check " + orderPlaced;
         String[] sendArray = {messageSend, latString, longString};
         myClient.execute(sendArray);
 
@@ -147,23 +222,26 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             return;
         }
 
-        //orderPlaced = "";
-        isOrderPlaced = false;
-        showAlert("ALERT", "Your order has been cancelled");
+        clientSetup("Cancel Order");
     }
 
     public void placeUserOrder() {
+        orderPlaced = currDrink;
+        String messageSend = "Check " + orderPlaced;
+        getGPSCoordinates();
+
         if (isOrderPlaced == true) {
             showAlert("ALERT!", "You can only place one order at a time");
             return;
+        } else if (orderPlaced.equals("--Select Drink--")) {
+            showAlert("ALERT!", "Please select a drink to order");
+            return;
+        } else if (latString.equals("") || longString.equals("")) {
+            showAlert("GPS", "Could not get receive GPS coordinates\nPlease try again later");
+            return;
         }
-        if (isLocationOn == false) {
-            getGPSCoordinates();
-            if (isLocationOn == false) {
-                return;
-            }
-        }
-        clientSetup();
+
+        clientSetup(messageSend);
     }
 
     public void showAlert(String title, String message) {
@@ -220,6 +298,8 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
             cancelCurrentOrder();
         } else if (v.getId() == R.id.btnPlaceOrder) {
             placeUserOrder();
+        } else if (v.getId() == R.id.btnUpdateStock) {
+            updateStockWindow();
         }
 
         return;
@@ -228,7 +308,7 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         String selectedItem = parent.getSelectedItem().toString();
-        orderPlaced = selectedItem;
+        currDrink = selectedItem;
 
         /*if (selectedItem != "--Select Drink--") {
             showAlert("ALERT!", "This drink is not available. Please select another drink");

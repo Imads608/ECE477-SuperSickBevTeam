@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.imadsheriff.droneapp.StockActivity">
+
+    <TextView
+        android:id="@+id/txtView_Loading2"
+        android:layout_width="266dp"
+        android:layout_height="53dp"
+        android:layout_marginBottom="7dp"
+        android:layout_marginEnd="2dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="7dp"
+        android:text="Loading..."
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/btnCancelOrder"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnPlaceOrder"
+        app:layout_constraintVertical_bias="1.0"
+        tools:text="Loading..." />
+
+    <Button
+        android:id="@+id/btnExit"
+        android:layout_width="158dp"
+        android:layout_height="46dp"
+        android:layout_marginBottom="143dp"
+        android:layout_marginEnd="49dp"
+        android:layout_marginStart="19dp"
+        android:layout_marginTop="47dp"
+        android:text="EXIT"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/btnSend"
+        app:layout_constraintTop_toBottomOf="@+id/editAmount" />
+
+    <Button
+        android:id="@+id/btnSend"
+        android:layout_width="158dp"
+        android:layout_height="46dp"
+        android:layout_marginBottom="143dp"
+        android:layout_marginEnd="19dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="47dp"
+        android:text="Send"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/btnExit"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/editAmount" />
+
+    <EditText
+        android:id="@+id/editAmount"
+        android:layout_width="204dp"
+        android:layout_height="41dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="51dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="96dp"
+        android:ems="10"
+        android:inputType="number"
+        app:layout_constraintBottom_toBottomOf="@+id/gifViewDrone"
+        app:layout_constraintEnd_toStartOf="@+id/gifViewDrone"
+        app:layout_constraintStart_toEndOf="@+id/txtAdd"
+        app:layout_constraintTop_toBottomOf="@+id/editCode"
+        app:layout_constraintVertical_bias="0.316" />
+
+    <TextView
+        android:id="@+id/textView7"
+        android:layout_width="361dp"
+        android:layout_height="37dp"
+        android:elegantTextHeight="false"
+        android:fontFamily="@font/megrim"
+        android:text="Welcome to the Drone Delivery App"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        tools:layout_editor_absoluteX="12dp" />
+
+    <TextView
+        android:id="@+id/txtAdd"
+        android:layout_width="98dp"
+        android:layout_height="23dp"
+        android:layout_marginBottom="55dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="63dp"
+        android:text="Add Amount"
+        app:layout_constraintBottom_toTopOf="@+id/btnSend"
+        app:layout_constraintEnd_toStartOf="@+id/editAmount"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtSelect" />
+
+    <TextView
+        android:id="@+id/txtSelect"
+        android:layout_width="98dp"
+        android:layout_height="23dp"
+        android:layout_marginBottom="63dp"
+        android:layout_marginEnd="18dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="53dp"
+        android:text="Select Drink"
+        app:layout_constraintBottom_toTopOf="@+id/txtAdd"
+        app:layout_constraintEnd_toStartOf="@+id/spnChoose"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtCode" />
+
+    <TextView
+        android:id="@+id/txtCode"
+        android:layout_width="98dp"
+        android:layout_height="26dp"
+        android:layout_marginBottom="53dp"
+        android:layout_marginEnd="18dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="42dp"
+        android:text="Enter Code"
+        app:layout_constraintBottom_toTopOf="@+id/txtSelect"
+        app:layout_constraintEnd_toStartOf="@+id/editCode"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView7" />
+
+    <EditText
+        android:id="@+id/editCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="76dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        app:layout_constraintBottom_toTopOf="@+id/gifViewDrone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.832"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textView7"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <Spinner
+        android:id="@+id/spnChoose"
+        android:layout_width="219dp"
+        android:layout_height="40dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="32dp"
+        android:background="@android:drawable/btn_dropdown"
+        app:layout_constraintBottom_toTopOf="@+id/editAmount"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@+id/gifViewDrone"
+        app:layout_constraintTop_toBottomOf="@+id/editCode"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <TextView
+        android:id="@+id/textView10"
+        android:layout_width="186dp"
+        android:layout_height="23dp"
+        android:layout_marginBottom="6dp"
+        android:layout_marginEnd="182dp"
+        android:layout_marginStart="16dp"
+        android:text="FOR DEVELOPERS ONLY"
+        app:layout_constraintBottom_toTopOf="@+id/gifViewDrone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView7" />
+
+    <pl.droidsonroids.gif.GifImageView
+        android:id="@+id/gifViewDrone"
+        android:layout_width="362dp"
+        android:layout_height="302dp"
+        android:layout_marginBottom="120dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:src="@drawable/drone_flying"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.987" />
+</android.support.constraint.ConstraintLayout>
