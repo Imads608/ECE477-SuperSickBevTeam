@@ -1,15 +1,14 @@
 #include <ESP8266WiFi.h>
 
-const char* ssid = "esp-test";
-const char* password = "Hello There";
-
 // Drinks Available
-int numCoke = 100;
-int numMelloYello = 1000;
+int numCoke = 0;
+int numMelloYello = 0;
 int numRootBeer = 0;
 int numFanta = 0;
-int numSprite = 120;
+int numSprite = 0;
 String drinkOrder = "";
+
+int pinLED = 2;
 
 
 // Create an instance of the server
@@ -19,30 +18,42 @@ WiFiServer server(80);
 void setup() {
   Serial.begin(115200);
   delay(10);
+
+  //Set Pin Modes
+  pinMode(pinLED, OUTPUT); 
                                                 
   // Connect to WiFi network
   Serial.println();
   Serial.println();
-  Serial.print("Configuring access point...");
+  Serial.print("Connected to iPhone (2)...");
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.softAP(ssid, password);
+  WiFi.begin("iPhone (2)", "mx9g30orv7d9");
 
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(myIP);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("WiFi Connected!");
+  Serial.println("IP Address: ");
+  Serial.println(WiFi.localIP());
   
   // Start the server
   server.begin();
   Serial.println("Server started");
-
-  // Print the IP address
-  Serial.println(WiFi.localIP());
 }
 
 void loop() {
 
   // Check if STM is sending data
   getUARTData();
+
+  // Check to see if WiFi is still connected. If it is, turn on LED
+  if (WiFi.status() == WL_CONNECTED) {
+    digitalWrite(pinLED, HIGH);
+  } else {
+    digitalWrite(pinLED, LOW);
+  }
   
   // Check if a client has connected
   WiFiClient client = server.available();
@@ -280,5 +291,3 @@ void orderDrink(WiFiClient client, String compare) {
   }
 
 }
-
-
