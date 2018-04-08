@@ -46,58 +46,34 @@ void loop() {
   
   // Check if a client has connected
   WiFiClient client = server.available();
+  client.setTimeout(5000);
   if (!client) {
     return;
   }
+
+  // Send initial response to client
   client.println("Hello Client. I am free to receive an order");
   
   // Wait until the client sends drink request
   Serial.println("new client");
   while(!client.available()){
     delay(1);
-    //Serial.println("Lost Connection");
-    //client.stop();
-    //return;
   }
   
   // Read the first line of the request
-  String req = client.readString();//client.readStringUntil('\r');
-  //Serial.println(String("Request: " + req));
-  client.flush();
-  
-  Serial.print("Request: ");
-  Serial.println(req);
-
-  //Serial.print("Request Length: ");
-  //Serial.println(req.length());
-  int startIndex = 2;
-  int flag = 0;
-  int temp = 0;
-  
-  // Match the request
-  for (temp = 0; temp < req.length(); temp++) {
-    //Serial.print(temp);
-    //Serial.print(": ");
-    //Serial.println(req[temp]);
-    if (req[temp] == 'C' && flag == 0) {
-      startIndex = temp;
-      flag = 1;
-      //Serial.print("Start Index: ");
-      //Serial.println(temp);
-    }
-  }
-  String compare = String(req.substring(startIndex, req.length()));
+  String compare = matchRequest(client); 
 
   if (compare.equals("Cancel Order")) {
     cancelDrink(client);
   } else if (compare.equals("Calc Update")){
     updateNum(client);
+  } else if (compare.equals("Check Stock")) {
+    sendCurrStock(client);
   } else {
     orderDrink(client, compare);
   }
  
   delay(1);
-  //Serial.println("Sending order");
   Serial.println("Client disonnected");
 
   // The client will actually be disconnected 
@@ -119,7 +95,13 @@ void getUARTData() {
   }
 }
 
-String matchRequest(String req) {
+String matchRequest(WiFiClient client) {
+  String req = client.readString();
+  client.flush();
+  
+  Serial.print("Request: ");
+  Serial.println(req);
+
   int startIndex = 2;
   int flag = 0;
   int temp = 0;
@@ -136,14 +118,40 @@ String matchRequest(String req) {
       //Serial.println(temp);
     }
   }
-
+  
   String compare = String(req.substring(startIndex, req.length()));
 
   return compare;
 }
 
+void sendCurrStock(WiFiClient client) {
+  client.print("Got Stock Request");
+
+  // Wait for client to send number of drinks to update
+  while(!client.available()) {
+      delay(1);
+  }
+
+   // Get data and parse to get number itself
+  String recvd = matchRequest(client);
+  
+  String stockAmount = "Stock is ";
+  if (recvd.equals("Check Coca Cola")) {
+    stockAmount = stockAmount + numCoke;
+  } else if (recvd.equals("Check Mello Yello")) {
+    stockAmount = stockAmount + numMelloYello;
+  } else if (recvd.equals("Check Root Beer")) {
+    stockAmount = stockAmount + numRootBeer;
+  } else if (recvd.equals("Check Fanta")) {
+    stockAmount = stockAmount + numFanta;
+  } else if (recvd.equals("Check Sprite")) {
+    stockAmount = stockAmount + numSprite;
+  }
+
+  client.print(stockAmount);
+}
+
 void updateNum(WiFiClient client) {
-  Serial.println("In UpdateNum");
   client.print("Got Initial Request");
   
   // Wait for client to send number of drinks to update
@@ -152,25 +160,8 @@ void updateNum(WiFiClient client) {
   }
 
   // Get data and parse to get number itself
-  String recvd = client.readString();
-  client.flush();
-
-  int startIndex = 2;
-  int flag = 0;
-  int temp = 0;
+  String recvd = matchRequest(client);
   
-  // Match the request
-  for (temp = 0; temp < recvd.length(); temp++) {
-    if (recvd[temp] == 'C' && flag == 0) {
-      startIndex = temp;
-      flag = 1;
-    }
-  }
-
-  recvd = String(recvd.substring(startIndex, recvd.length()));
-  Serial.print("Update Request: ");
-  Serial.println(recvd);
-  //recvd = matchRequest(recvd);
   recvd = recvd.substring(5);
   Serial.print("Substring: ");
   Serial.println(recvd);
@@ -181,42 +172,26 @@ void updateNum(WiFiClient client) {
   while(!client.available()) {
       delay(1);
   }
-  String recvd2 = client.readString();
-  client.flush();
-
-  Serial.print("Drink Stock Before: ");
-  Serial.println(recvd2);
-  
-  startIndex = 2;
-  flag = 0;
-  temp = 0;
-  
-  // Match the request
-  for (temp = 0; temp < recvd2.length(); temp++) {
-    if (recvd2[temp] == 'C' && flag == 0) {
-      startIndex = temp;
-      flag = 1;
-    }
-  }
-  recvd2 = String(recvd2.substring(startIndex, recvd2.length()));
+  String recvd2 = matchRequest(client);
   Serial.print("Drink Stock: ");
   Serial.println(recvd2);
   
-  // Send ack to client
-  client.print("Got Drink Name");
 
   // Update total amount of drinks in stock
-  if (recvd2.equals("Calc Coke")) {
-    numCoke = numCoke + update;
+  if (recvd2.equals("Calc Coca Cola")) {
+    numCoke = update;
   } else if (recvd2.equals("Calc Mello Yello")) {
-    numMelloYello = numMelloYello + update;
+    numMelloYello = update;
   } else if (recvd2.equals("Calc Root Beer")) {
-    numRootBeer = numRootBeer + update;
+    numRootBeer = update;
   } else if (recvd2.equals("Calc Fanta")) {
-    numFanta = numFanta + update;
+    numFanta = update;
   } else if (recvd2.equals("Calc Sprite")) {
-    numSprite = numSprite + update;
+    numSprite = update;
   }
+
+  // Send ack to client
+  client.print("Got Drink Name");
 }
 
 void cancelDrink(WiFiClient client) {
@@ -231,23 +206,13 @@ void cancelDrink(WiFiClient client) {
   } else if (drinkOrder.equals("Sprite")) {
     numSprite = numSprite + 1;
   }
-
+  drinkOrder = "";
   client.print("Order Cancelled");
   Serial.println("Cancel Order to Micro");
   //Serial.write("Cancel Order");
 }
 
 void orderDrink(WiFiClient client, String compare) {
-  //Serial.print("compare: ");
-  //Serial.println(compare);
-  
-  /*
-  for (temp = 0; temp < compare.length(); temp++) {
-    Serial.print(temp);
-    Serial.print(": ");
-    Serial.println(compare[temp]);
-  }*/
-  
   String sendBack = "Not Available";
 
   if (compare.equals("Check Coca Cola")) {
