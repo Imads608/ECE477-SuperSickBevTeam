@@ -61,7 +61,7 @@ public class Client extends AsyncTask<String, Void, Void> {
             request = pParams[0];
             latString = pParams[1];
             longString = pParams[2];
-            gpsCoordinates = latString + ", " + longString;
+            gpsCoordinates = latString + "," + longString;
             response = "";
         }
 

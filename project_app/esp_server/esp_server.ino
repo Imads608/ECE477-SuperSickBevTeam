@@ -13,7 +13,7 @@ int pinLED = 2;
 
 // Create an instance of the server
 // specify the port to listen on as an argument
-WiFiServer server(80);
+WiFiServer server(2129);
 
 void setup() {
   Serial.begin(115200);
@@ -27,7 +27,7 @@ void setup() {
   Serial.println();
   Serial.print("Connected to iPhone (2)...");
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("iPhone (2)", "mx9g30orv7d9");
+  WiFi.begin("Pauls network", "jnemrcf4");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -122,7 +122,7 @@ String matchRequest(WiFiClient client) {
     //Serial.print(temp);
     //Serial.print(": ");
     //Serial.println(req[temp]);
-    if (req[temp] == 'C' && flag == 0) {
+    if ((req[temp] == 'C' || req[temp] == '+' || req[temp] == '-') && flag == 0) {
       startIndex = temp;
       flag = 1;
       //Serial.print("Start Index: ");
@@ -277,16 +277,20 @@ void orderDrink(WiFiClient client, String compare) {
     while(!client.available()){
       delay(1);
     }
+
+		String newreq = matchRequest(client);
+		/*
     String newreq = client.readString();
     client.flush();
     Serial.print("GPS: ");
     Serial.println(newreq);
-    
+    */
 
     // Send response to client
     client.print("Delivering Order");
-    String sendOrder = drinkOrder + "," + newreq + "\r";
-    //Serial.write(sendOrder);
+    //String sendOrder = drinkOrder + "," + newreq + "\r";
+    String sendOrder = newreq + "," + drinkOrder + ",\r";
+		//Serial.write(sendOrder);
     Serial.println("Sending Order");
   }
 
