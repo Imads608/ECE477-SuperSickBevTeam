@@ -15,6 +15,7 @@ import pl.droidsonroids.gif.GifImageView;
 public class StockActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemSelectedListener {
     private Button btnSend;
     private Button btnExit;
+    private Button btnChkStock;
     private Spinner spnChoose;
     private EditText editCode;
     private EditText editAmount;
@@ -23,6 +24,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
     private TextView txtCode;
     private TextView txtSelect;
     private TextView txtAdd;
+
 
     private String code = "608123";
     private String chosenDrink = "";
@@ -48,6 +50,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
     public void setLoadingScreen() {
         btnSend.setVisibility(View.GONE);
         btnExit.setVisibility(View.GONE);
+        btnChkStock.setVisibility(View.GONE);
         spnChoose.setVisibility(View.GONE);
         editCode.setVisibility(View.GONE);
         editAmount.setVisibility(View.GONE);
@@ -63,6 +66,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
     public void finishLoadingScreen() {
         btnSend.setVisibility(View.VISIBLE);
         btnExit.setVisibility(View.VISIBLE);
+        btnChkStock.setVisibility(View.VISIBLE);
         spnChoose.setVisibility(View.VISIBLE);
         editCode.setVisibility(View.VISIBLE);
         editAmount.setVisibility(View.VISIBLE);
@@ -72,7 +76,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
         txtAdd.setVisibility(View.VISIBLE);
 
 
-        gifViewDrone.setVisibility(View.GONE);
+        gifViewDrone.setVisibility(View.INVISIBLE);
     }
 
     public void showAlert(String title, String message) {
@@ -102,6 +106,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
     public void init() {
         btnSend = (Button) findViewById(R.id.btnSend);
         btnExit = (Button) findViewById(R.id.btnExit);
+        btnChkStock = (Button) findViewById(R.id.btnChkStock);
         spnChoose = (Spinner) findViewById(R.id.spnChoose);
         editCode = (EditText) findViewById(R.id.editCode);
         editAmount = (EditText) findViewById(R.id.editAmount);
@@ -116,6 +121,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
 
         btnSend.setOnClickListener(this);
         btnExit.setOnClickListener(this);
+        btnChkStock.setOnClickListener(this);
         spnChoose.setOnItemSelectedListener(this);
     }
 
@@ -134,6 +140,25 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
             return;
         }
         send = "Calc Update";
+        clientSetup(send);
+
+    }
+
+    public void checkStock() {
+        String enteredCode = "";
+        String send = "";
+
+        if (!editCode.getText().toString().equals(code)) {
+            showAlert("Denied", "Invalid code");
+            return;
+        } else if (chosenDrink.equals("--Select Drink--") || chosenDrink.equals("")) {
+            showAlert("Denied", "Please select a drink");
+            return;
+        } else if (editAmount.getText().toString().equals("")) {
+            showAlert("Denied", "Please select an amount to update");
+            return;
+        }
+        send = "Check Stock";
         clientSetup(send);
 
     }
@@ -168,6 +193,8 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
             sendUpdate();
         } else if (v.getId() == R.id.btnExit) {
             exitActivity();//checkOrderStatus();
+        } else if (v.getId() == R.id.btnChkStock) {
+            checkStock();
         }
 
         return;

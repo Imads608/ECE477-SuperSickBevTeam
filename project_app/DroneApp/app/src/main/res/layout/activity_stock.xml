@@ -90,7 +90,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="63dp"
-        android:text="Add Amount"
+        android:text="Set Amount"
         app:layout_constraintBottom_toTopOf="@+id/btnSend"
         app:layout_constraintEnd_toStartOf="@+id/editAmount"
         app:layout_constraintStart_toStartOf="parent"
@@ -107,6 +107,7 @@
         android:text="Select Drink"
         app:layout_constraintBottom_toTopOf="@+id/txtAdd"
         app:layout_constraintEnd_toStartOf="@+id/spnChoose"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/txtCode" />
 
@@ -121,6 +122,7 @@
         android:text="Enter Code"
         app:layout_constraintBottom_toTopOf="@+id/txtSelect"
         app:layout_constraintEnd_toStartOf="@+id/editCode"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView7" />
 
@@ -183,4 +185,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.987" />
+
+    <Button
+        android:id="@+id/btnChkStock"
+        android:layout_width="152dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginStart="12dp"
+        android:text="Check Current Stock"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/txtView_Loading2"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/gifViewDrone"
+        app:layout_constraintVertical_bias="0.0" />
 </android.support.constraint.ConstraintLayout>

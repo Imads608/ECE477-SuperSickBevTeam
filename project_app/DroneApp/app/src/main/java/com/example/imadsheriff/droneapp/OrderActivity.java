@@ -10,14 +10,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
-
+import android.support.v4.content.*;
 import java.util.*;
 
 import android.location.*;
 
 import pl.droidsonroids.gif.GifImageView;
 
-public class OrderActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemSelectedListener {
+public class OrderActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemSelectedListener, ActivityCompat.OnRequestPermissionsResultCallback {
     // Widget related variables
     private Button btnInstructions, btnPlaceOrder, btnCancelOrder, btnCheckOrder, btnUpdateStock;
     private TextView textView3, txtLoading;
@@ -34,6 +34,7 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     private boolean isLocationOn = false;
     private String ipAddr = "192.168.4.1";
     private String portNum = "80";
+    private static final int PERMISSION_REQUEST_LOCATION = 0;
 
 
     @Override
@@ -150,6 +151,12 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     public void getGPSCoordinates() {
         // Acquire a reference to the system Location Manager
         LocationManager locationManager = (LocationManager) this.getSystemService(android.content.Context.LOCATION_SERVICE);
+        if (ContextCompat.checkSelfPermission(OrderActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(OrderActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_LOCATION);
+
+            //showAlert("Location Services", "Please turn on location to order a drink");
+            return;
+        }
         if (checkLocationEnabled(locationManager) == false) {
             showAlert("Location Services", "Please turn on Location to order a drink");
             return;
@@ -158,8 +165,16 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
                 // Called when a new location is found by the network location provider.
-                latString = Double.toString(location.getLatitude());
-                longString = Double.toString(location.getLongitude());
+                if (location.getLatitude() > 0) {
+                    latString = "+" + Double.toString(location.getLatitude());
+                } else {
+                    latString = Double.toString(location.getLatitude());
+                }
+                if (location.getLongitude() > 0) {
+                    longString = "+" + Double.toString(location.getLongitude());
+                } else {
+                    longString = Double.toString(location.getLongitude());
+                }
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -233,13 +248,14 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         if (isOrderPlaced == true) {
             showAlert("ALERT!", "You can only place one order at a time");
             return;
-        } else if (orderPlaced.equals("--Select Drink--")) {
+        } else if (orderPlaced.equals("--Select Drink--") || orderPlaced.equals("")) {
             showAlert("ALERT!", "Please select a drink to order");
             return;
         } else if (latString.equals("") || longString.equals("")) {
             showAlert("GPS", "Could not get receive GPS coordinates\nPlease try again later");
             return;
         }
+
 
         clientSetup(messageSend);
     }

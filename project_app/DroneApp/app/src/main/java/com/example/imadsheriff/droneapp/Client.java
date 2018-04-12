@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.net.InetSocketAddress;
 
 public class Client extends AsyncTask<String, Void, Void> {
 
@@ -61,12 +62,15 @@ public class Client extends AsyncTask<String, Void, Void> {
             request = pParams[0];
             latString = pParams[1];
             longString = pParams[2];
-            gpsCoordinates = latString + "," + longString;
+            gpsCoordinates = latString + ", " + longString;
             response = "";
+        } else {
+            request = pParams[0];
         }
 
         try {
-            socket = new Socket(dstAddress, dstPort);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(dstAddress, dstPort), 5000);
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024);
             byte[] buffer = new byte[1024];
             int bytesRead;
@@ -83,13 +87,8 @@ public class Client extends AsyncTask<String, Void, Void> {
                     status = "Connection Accepted";
 
                     // Send drink request to server or start stock update
-                    if (devOn == false) {
-                        dOut.writeUTF(request);
-                        dOut.flush();
-                    } else {
-                        dOut.writeUTF("Calc Update");
-                        dOut.flush();
-                    }
+                    dOut.writeUTF(request);
+                    dOut.flush();
 
                     // Wait for server to check if drink is available
                 } else if (response.contains("Not Available")) {
@@ -122,6 +121,13 @@ public class Client extends AsyncTask<String, Void, Void> {
                     dOut.flush();
                 } else if (response.contains("Got Drink Name")) {
                     status = "Stock Update finished";
+                } else if (response.contains("Got Stock Request")) {
+                    status = "Stock request in progress";
+
+                    dOut.writeUTF("Check " + updateDrink);
+                    dOut.flush();
+                } else if (response.contains("Stock is ")) {
+                    status = response;
                 }
             }
 
@@ -167,6 +173,9 @@ public class Client extends AsyncTask<String, Void, Void> {
             myOrderActivity.setOrderPlaced(false);
         } else if (status == "Stock Update finished") {
             myStockActivity.showAlert("Stock Update", "Successfully updated stock");
+            devOn = false;
+        } else if (status.contains("Stock is ")) {
+            myStockActivity.showAlert("Current Stock", status);
             devOn = false;
         } else if (status != "Connection Accepted") {
             myOrderActivity.showAlert("Connection Status", "Could not get a connection with drone. Please try again later");
