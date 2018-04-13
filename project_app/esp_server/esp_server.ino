@@ -13,7 +13,7 @@ int pinLED = 2;
 
 // Create an instance of the server
 // specify the port to listen on as an argument
-WiFiServer server(2129);
+WiFiServer server(1058);
 
 void setup() {
   Serial.begin(115200);
@@ -25,9 +25,9 @@ void setup() {
   // Connect to WiFi network
   Serial.println();
   Serial.println();
-  Serial.print("Connected to iPhone (2)...");
+  Serial.print("Connecting to Wifi...");
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("Pauls network", "jnemrcf4");
+  WiFi.begin("I have WiFi", "******");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -37,6 +37,8 @@ void setup() {
   Serial.println("WiFi Connected!");
   Serial.println("IP Address: ");
   Serial.println(WiFi.localIP());
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
   
   // Start the server
   server.begin();

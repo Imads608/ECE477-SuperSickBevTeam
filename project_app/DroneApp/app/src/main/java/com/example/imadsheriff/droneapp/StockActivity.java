@@ -39,7 +39,7 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
 
     public void clientSetup(String messageSend) {
         setLoadingScreen();
-        Client myClient = new Client(this, true, editAmount.getText().toString(), chosenDrink, "192.168.4.1", 80);
+        Client myClient = new Client(this, true, editAmount.getText().toString(), chosenDrink, OrderActivity.editIP.getText().toString(), Integer.parseInt(OrderActivity.editPortNum.getText().toString()));
         //String messageSend = "Check " + orderPlaced;
         String[] sendArray = {messageSend};
         myClient.execute(sendArray);
@@ -138,7 +138,14 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
         } else if (editAmount.getText().toString().equals("")) {
             showAlert("Denied", "Please select an amount to update");
             return;
+        } else if (OrderActivity.editIP.getText().toString().equals("")) {
+            showAlert("Denied", "Please enter an IP Address in the Main Window");
+            return;
+        } else if (OrderActivity.editPortNum.getText().toString().equals("")) {
+            showAlert("Denied", "Please enter a Port Number in the Main Window");
+            return;
         }
+
         send = "Calc Update";
         clientSetup(send);
 
@@ -148,16 +155,21 @@ public class StockActivity extends AppCompatActivity implements View.OnClickList
         String enteredCode = "";
         String send = "";
 
+
         if (!editCode.getText().toString().equals(code)) {
             showAlert("Denied", "Invalid code");
             return;
         } else if (chosenDrink.equals("--Select Drink--") || chosenDrink.equals("")) {
             showAlert("Denied", "Please select a drink");
             return;
-        } else if (editAmount.getText().toString().equals("")) {
-            showAlert("Denied", "Please select an amount to update");
+        } else if (OrderActivity.editIP.getText().toString() == "") {
+            showAlert("Denied", "Please enter an IP Address in the Main Window");
+            return;
+        } else if (OrderActivity.editPortNum.getText().toString() == "") {
+            showAlert("Denied", "Please enter a Port Number in the Main Window");
             return;
         }
+
         send = "Check Stock";
         clientSetup(send);
 

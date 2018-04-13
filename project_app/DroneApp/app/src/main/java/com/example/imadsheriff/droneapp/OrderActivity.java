@@ -22,7 +22,7 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     private Button btnInstructions, btnPlaceOrder, btnCancelOrder, btnCheckOrder, btnUpdateStock;
     private TextView textView3, txtLoading;
     private Spinner spnDrinks;
-    private EditText editIP, editPortNum;
+    public static EditText editIP, editPortNum;
     private GifImageView gifView;
 
     // Misc related variables to keep track of meta-data

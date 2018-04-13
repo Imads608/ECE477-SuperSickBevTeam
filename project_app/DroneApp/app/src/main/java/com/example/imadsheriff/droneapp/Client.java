@@ -177,9 +177,14 @@ public class Client extends AsyncTask<String, Void, Void> {
         } else if (status.contains("Stock is ")) {
             myStockActivity.showAlert("Current Stock", status);
             devOn = false;
-        } else if (status != "Connection Accepted") {
-            myOrderActivity.showAlert("Connection Status", "Could not get a connection with drone. Please try again later");
-            myOrderActivity.setOrderPlaced(false);
+        } else {
+            if (devOn == false) {
+                myOrderActivity.showAlert("Connection Status", "Could not get a connection with drone. Please try again later");
+                myOrderActivity.setOrderPlaced(false);
+            } else if (devOn == true) {
+                myStockActivity.showAlert("Connection Status", "Could not get a connection with drone. Please try again later");
+                devOn = false;
+            }
         }
 
         super.onPostExecute(result);
