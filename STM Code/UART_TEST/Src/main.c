@@ -1,3 +1,4 @@
+
 /**
   ******************************************************************************
   * @file           : main.c
@@ -38,10 +39,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
-#include <string.h>
-#include <stdlib.h>
 
 /* USER CODE BEGIN Includes */
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
 /* USER CODE END Includes */
 
@@ -50,6 +52,7 @@ I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -66,12 +69,14 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_USART3_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+
+//GPS Variables
 int Rx_indx;
 int Transfer_cplt = 0;
-int dataReceived = 0;
 uint8_t Rx_data;
 char Rx_Buffer[80];
 char GPS_Data[60];
@@ -80,7 +85,19 @@ char latDegBuff[3]; // "XX\0"
 char latMinBuff[8]; // "XX.XXXX\0"
 char longDegBuff[4]; // "XX\0"
 char longMinBuff[8]; // "XX.XXXX\0"
+char altitudeBuff[6];
 int printLCD = 0;
+
+//WiFi Variables
+int WiFi_Transfer_cplt = 0;
+uint8_t Rx3_data;
+int Rx3_indx;
+char Rx3_Buffer[35];
+char drinkOrder[15];
+char targetLatDeg[3];
+char targetLatMin[9];
+char targetLongDeg[3];
+char targetLongMin[9];
 
 unsigned long prevTimeLED;
 unsigned long prevTimeLCD;
@@ -108,6 +125,12 @@ struct RMC_data {
     double altitude;
 } RMC;
 
+struct WiFi_data {
+	struct Latitude_data Latitude;
+	struct Longitude_data Longitude;
+	int orderCancelled;
+} WiFi;
+
 //LCD Functions
 void lcd_send_cmd (char);
 void lcd_send_data (char);
@@ -126,6 +149,24 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     uint8_t i;
     uint8_t j;
     uint8_t k;
+
+    if (huart->Instance == USART3)
+    {
+    	if (Rx3_indx==0) {for (i=0;i<35;i++) Rx3_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
+
+		if (Rx3_data != 13) //if received data different from ascii 13 (enter)
+		{
+			Rx3_Buffer[Rx3_indx++]=Rx3_data;    //add data to Rx_Buffer
+		}
+		else            //if received data = 13
+		{
+			Rx3_indx=0;
+
+			WiFi_Transfer_cplt=1;//transfer complete, data is ready to read
+		}
+
+		HAL_UART_Receive_IT(&huart3, &Rx3_data, 1);   //activate UART receive interrupt every time
+    }
 
     if (huart->Instance == USART2)  //current UART
     {
@@ -191,6 +232,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
   lcd_init();
@@ -200,6 +242,7 @@ int main(void)
   result = strcmp(test, "Foo");
 
   HAL_UART_Receive_IT(&huart2, &Rx_data, 1);
+  HAL_UART_Receive_IT(&huart3, &Rx3_data, 1);   //activate UART receive interrupt every time
 
   prevTimeLED = 0;
   prevTimeLCD = 0;
@@ -268,7 +311,104 @@ int main(void)
 
 		  else if (strcmp(CoordinateType, "$GPGGA") == 0)
 		  {
-			  //Get altitude data
+			  int a = 46;
+			  int b = 0;
+
+			  while (GPS_Data[a] != ',') {
+				  altitudeBuff[b] = GPS_Data[a];
+				  a++;
+				  b++;
+			  }
+			  altitudeBuff[b] = '\0';
+
+			  RMC.altitude = roundf((atof(altitudeBuff)) * 10) / 10;
+		  }
+	  }
+
+	  else if (WiFi_Transfer_cplt)
+	  {
+		  WiFi_Transfer_cplt = 0;
+		  //LATITUDE
+		  if (Rx3_Buffer[0] == '+')
+		  {
+			  WiFi.Latitude.orientation = 'N';
+			  WiFi.orderCancelled = 0;
+		  }
+		  else if (Rx3_Buffer[0] == '-')
+		  {
+			  WiFi.Latitude.orientation = 'S';
+			  WiFi.orderCancelled = 0;
+		  }
+		  else
+		  {
+			  WiFi.orderCancelled = 1;
+		  }
+
+		  if (WiFi.orderCancelled == 0)
+		  {
+			  //Latitude Degrees
+			  targetLatDeg[0] = Rx3_Buffer[1];
+			  targetLatDeg[1] = Rx3_Buffer[2];
+			  targetLatDeg[2] = '\0';
+
+			  WiFi.Latitude.degrees = atoi(targetLatDeg);
+
+			  //Latitude decimalMin
+			  targetLatMin[0] = Rx3_Buffer[4];
+			  targetLatMin[1] =Rx3_Buffer[5];
+			  targetLatMin[2] = '.';
+			  targetLatMin[3] = Rx3_Buffer[6];
+			  targetLatMin[4] = Rx3_Buffer[7];
+			  targetLatMin[5] = Rx3_Buffer[8];
+			  targetLatMin[6] = Rx3_Buffer[9];
+			  targetLatMin[7] = Rx3_Buffer[10];
+			  targetLatMin[8] = '\0';
+
+			  WiFi.Latitude.decimalMin = atof(targetLatMin);
+
+
+			  //LONGITUDE
+			  if (Rx3_Buffer[13] == '+')
+			  {
+				WiFi.Longitude.orientation = 'E';
+			  }
+			  else if (Rx3_Buffer[13] == '-')
+			  {
+				WiFi.Longitude.orientation = 'W';
+			  }
+
+			  //Longitude Degrees
+			  targetLongDeg[0] = Rx3_Buffer[14];
+			  targetLatDeg[1] = Rx3_Buffer[15];
+			  targetLatDeg[2] = '\0';
+
+			  WiFi.Longitude.degrees = atoi(targetLongDeg);
+
+			  //Longitude decimalMin
+			  targetLongMin[0] = Rx3_Buffer[17];
+			  targetLongMin[1] = Rx3_Buffer[18];
+			  targetLongMin[2] = '.';
+			  targetLongMin[3] = Rx3_Buffer[19];
+			  targetLongMin[4] = Rx3_Buffer[20];
+			  targetLongMin[5] = Rx3_Buffer[21];
+			  targetLongMin[6] = Rx3_Buffer[22];
+			  targetLongMin[7] = Rx3_Buffer[23];
+			  targetLongMin[8] = '\0';
+
+			  WiFi.Longitude.decimalMin = atof(targetLongMin);
+
+
+			  //DRINK ORDER
+			  int a = 25;
+			  int b = 0;
+
+			  while (Rx3_Buffer[a] != ',')
+			  {
+				  drinkOrder[b] = Rx3_Buffer[a];
+				  a++;
+				  b++;
+			  }
+			  drinkOrder[b] = '\0';
 		  }
 	  }
 
@@ -393,6 +533,25 @@ static void MX_USART2_UART_Init(void)
 
 }
 
+/* USART3 init function */
+static void MX_USART3_UART_Init(void)
+{
+
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /** Configure pins as 
         * Analog 
         * Input 
@@ -407,8 +566,8 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
