@@ -23,15 +23,26 @@ void setup() {
   pinMode(pinLED, OUTPUT); 
                                                 
   // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to Wifi...");
   /* You can remove the password parameter if you want the AP to be open. */
   WiFi.begin("I have WiFi", "******");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
+    Serial.print(".");
   }
 
+  Serial.println("WiFi Connected!");
+  Serial.println("IP Address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
+  
   // Start the server
   server.begin();
+  Serial.println("Server started");
 }
 
 void loop() {
@@ -57,6 +68,7 @@ void loop() {
   client.println("Hello Client. I am free to receive an order");
   
   // Wait until the client sends drink request
+  Serial.println("new client");
   while(!client.available()){
     delay(1);
   }
@@ -75,6 +87,7 @@ void loop() {
   }
  
   delay(1);
+  Serial.println("Client disonnected");
 
   // The client will actually be disconnected 
   // when the function returns and 'client' object is detroyed
@@ -99,6 +112,8 @@ String matchRequest(WiFiClient client) {
   String req = client.readString();
   client.flush();
   
+  Serial.print("Request: ");
+  Serial.println(req);
 
   int startIndex = 2;
   int flag = 0;
@@ -106,9 +121,14 @@ String matchRequest(WiFiClient client) {
   
   // Match the request
   for (temp = 0; temp < req.length(); temp++) {
+    //Serial.print(temp);
+    //Serial.print(": ");
+    //Serial.println(req[temp]);
     if ((req[temp] == 'C' || req[temp] == '+' || req[temp] == '-') && flag == 0) {
       startIndex = temp;
       flag = 1;
+      //Serial.print("Start Index: ");
+      //Serial.println(temp);
     }
   }
   
@@ -156,6 +176,8 @@ void updateNum(WiFiClient client) {
   String recvd = matchRequest(client);
   
   recvd = recvd.substring(5);
+  Serial.print("Substring: ");
+  Serial.println(recvd);
   int update = recvd.toInt();
 
   // Send ack to client and get drink name to update
@@ -164,6 +186,8 @@ void updateNum(WiFiClient client) {
       delay(1);
   }
   String recvd2 = matchRequest(client);
+  Serial.print("Drink Stock: ");
+  Serial.println(recvd2);
   
 
   // Update total amount of drinks in stock
@@ -197,7 +221,8 @@ void cancelDrink(WiFiClient client) {
   }
   drinkOrder = "";
   client.print("Order Cancelled");
-  Serial.write("C"); // Cancel Order
+  Serial.println("Cancel Order to Micro");
+  //Serial.write("Cancel Order");
 }
 
 void orderDrink(WiFiClient client, String compare) {
@@ -207,31 +232,41 @@ void orderDrink(WiFiClient client, String compare) {
     if (numCoke > 0) {
       sendBack = "Available";
       numCoke = numCoke - 1;
+      Serial.print("Cokes left: ");
       drinkOrder = "Coke";
+      Serial.println(numCoke);
     }
   } else if (compare.equals("Check Mello Yello")) {
     if (numMelloYello > 0) {
       sendBack = "Available";
       numMelloYello = numMelloYello - 1;
+      Serial.print("Mello Yellos left: ");
       drinkOrder = "Mello Yello";
+      Serial.println(numMelloYello);
     }
   } else if (compare.equals("Check Root Beer")) {
     if (numRootBeer > 0) {
       sendBack = "Available"; 
       numRootBeer = numRootBeer - 1;
+      Serial.print("Root Beers left: ");
       drinkOrder = "Root Beer";
+      Serial.println(numRootBeer);
     }
   } else if (compare.equals("Check Fanta")) {
     if (numFanta > 0) {
       sendBack = "Available";
       numFanta = numFanta - 1;
+      Serial.print("Fantas left: ");
       drinkOrder = "Fanta";
+      Serial.println(numFanta);
     }
   } else if (compare.equals("Check Sprite")) {
     if (numSprite > 0) {
       sendBack = "Available";
       numSprite = numSprite - 1;
+      Serial.print("Sprites left: ");
       drinkOrder = "Sprite";
+      Serial.println(numSprite);
     }
   }
 
@@ -246,10 +281,19 @@ void orderDrink(WiFiClient client, String compare) {
     }
 
 		String newreq = matchRequest(client);
+		/*
+    String newreq = client.readString();
+    client.flush();
+    Serial.print("GPS: ");
+    Serial.println(newreq);
+    */
 
     // Send response to client
     client.print("Delivering Order");
+    //String sendOrder = drinkOrder + "," + newreq + "\r";
     String sendOrder = newreq + "," + drinkOrder + ",\r";
+		//Serial.write(sendOrder);
+    Serial.println("Sending Order");
   }
 
 }
