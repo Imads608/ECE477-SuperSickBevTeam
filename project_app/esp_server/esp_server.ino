@@ -198,6 +198,19 @@ void cancelDrink(WiFiClient client) {
   drinkOrder = "";
   client.print("Order Cancelled");
   Serial.write("C\r"); // Cancel Order
+	/*
+	String recvd = "";
+	char charVal;
+	while (!recvd.equals("No") || !recvd.equals("Yes")) {
+		charVal = Serial.read();
+		recvd = recvd + charVal;
+	}
+
+	if (recvd.equals("No")) {
+		client.print("Order not cancelled");
+	}	else {
+		client.print("Order Cancelled");
+	}	*/
 }
 
 void orderDrink(WiFiClient client, String compare) {
