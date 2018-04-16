@@ -24,7 +24,7 @@ void setup() {
                                                 
   // Connect to WiFi network
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("I have WiFi", "******");
+  WiFi.begin("Imad", "36e03fvcy2c0n");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -197,11 +197,20 @@ void cancelDrink(WiFiClient client) {
   }
   drinkOrder = "";
   client.print("Order Cancelled");
-  Serial.write("C"); // Cancel Order
+  Serial.write("C\r"); // Cancel Order
 }
 
 void orderDrink(WiFiClient client, String compare) {
   String sendBack = "Not Available";
+	String a = ""; // temp variable
+
+	// TODO: Need to fix later
+	if (drinkOrder.equals("")) {
+		a = "Hi";
+	} else {	
+		client.print("Wrong client");
+		return;
+	}
 
   if (compare.equals("Check Coca Cola")) {
     if (numCoke > 0) {
@@ -250,6 +259,9 @@ void orderDrink(WiFiClient client, String compare) {
     // Send response to client
     client.print("Delivering Order");
     String sendOrder = newreq + "," + drinkOrder + ",\r";
+    char sendData[35];
+    sendOrder.toCharArray(sendData, 35);
+    Serial.write(sendData);
   }
 
 }

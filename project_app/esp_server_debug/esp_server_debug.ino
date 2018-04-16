@@ -27,7 +27,7 @@ void setup() {
   Serial.println();
   Serial.print("Connecting to Wifi...");
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("I have WiFi", "******");
+  WiFi.begin("Imad", "36e03fvcy2c0n");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
