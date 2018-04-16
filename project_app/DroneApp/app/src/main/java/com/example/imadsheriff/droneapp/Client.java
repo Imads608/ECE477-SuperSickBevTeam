@@ -128,6 +128,8 @@ public class Client extends AsyncTask<String, Void, Void> {
                     dOut.flush();
                 } else if (response.contains("Stock is ")) {
                     status = response;
+                } else if (response.contains("Wrong client")) {
+                    status = "Busy with another client";
                 }
             }
 
@@ -177,6 +179,9 @@ public class Client extends AsyncTask<String, Void, Void> {
         } else if (status.contains("Stock is ")) {
             myStockActivity.showAlert("Current Stock", status);
             devOn = false;
+        } else if (status.equals("Busy with another client")) {
+            myOrderActivity.showAlert("Denied", "The drone is busy with another customer");
+            myOrderActivity.setOrderPlaced(false);
         } else {
             if (devOn == false) {
                 myOrderActivity.showAlert("Connection Status", "Could not get a connection with drone. Please try again later");

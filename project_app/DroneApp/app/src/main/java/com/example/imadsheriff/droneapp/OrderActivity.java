@@ -11,6 +11,8 @@ import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
 import android.support.v4.content.*;
+
+import java.text.DecimalFormat;
 import java.util.*;
 
 import android.location.*;
@@ -165,15 +167,19 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
         LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
                 // Called when a new location is found by the network location provider.
+                DecimalFormat f = new DecimalFormat("##.000000");
                 if (location.getLatitude() > 0) {
-                    latString = "+" + Double.toString(location.getLatitude());
+                    latString = "+" + f.format(location.getLatitude());
                 } else {
-                    latString = Double.toString(location.getLatitude());
+                    latString = f.format(location.getLatitude());
+                    //latString = Double.toString(location.getLatitude());
                 }
                 if (location.getLongitude() > 0) {
-                    longString = "+" + Double.toString(location.getLongitude());
+                    longString = "+" + f.format(location.getLongitude());
+                    //longString = "+" + Double.toString(location.getLongitude());
                 } else {
-                    longString = Double.toString(location.getLongitude());
+                    longString = f.format(location.getLongitude());
+                    //longString = Double.toString(location.getLongitude());
                 }
             }
 
