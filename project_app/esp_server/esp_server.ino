@@ -259,8 +259,8 @@ void orderDrink(WiFiClient client, String compare) {
     // Send response to client
     client.print("Delivering Order");
     String sendOrder = newreq + "," + drinkOrder + ",\r";
-    char sendData[35];
-    sendOrder.toCharArray(sendData, 35);
+    char sendData[40];
+    sendOrder.toCharArray(sendData, 40);
     Serial.write(sendData);
   }
 
