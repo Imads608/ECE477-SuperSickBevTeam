@@ -20,18 +20,31 @@ void setup() {
   delay(10);
 
   //Set Pin Modes
-  pinMode(pinLED, OUTPUT); 
-                                                
+  pinMode(LED_BUILTIN, OUTPUT); 
+  digitalWrite(LED_BUILTIN, HIGH);
+                             
   // Connect to WiFi network
   /* You can remove the password parameter if you want the AP to be open. */
   WiFi.begin("Imad", "36e03fvcy2c0n");
 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    //delay(500);
+    getUARTData();
   }
 
   // Start the server
   server.begin();
+}
+
+void WiFiReconnect() {
+  WiFi.disconnect(true);
+
+  /* You can remove the password parameter if you want the AP to be open. */
+  WiFi.begin("Imad", "36e03fvcy2c0n");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    getUARTData();
+  }
 }
 
 void loop() {
@@ -41,9 +54,10 @@ void loop() {
 
   // Check to see if WiFi is still connected. If it is, turn on LED
   if (WiFi.status() == WL_CONNECTED) {
-    digitalWrite(pinLED, HIGH);
+    digitalWrite(LED_BUILTIN, LOW);
   } else {
-    digitalWrite(pinLED, LOW);
+    digitalWrite(LED_BUILTIN, HIGH);
+    WiFiReconnect();
   }
   
   // Check if a client has connected
@@ -198,32 +212,30 @@ void cancelDrink(WiFiClient client) {
   drinkOrder = "";
   client.print("Order Cancelled");
   Serial.write("C\r"); // Cancel Order
-	/*
-	String recvd = "";
-	char charVal;
-	while (!recvd.equals("No") || !recvd.equals("Yes")) {
-		charVal = Serial.read();
-		recvd = recvd + charVal;
-	}
+  /*
+  String recvd = "";
+  char charVal;
+  while (!recvd.equals("No") || !recvd.equals("Yes")) {
+    charVal = Serial.read();
+    recvd = recvd + charVal;
+  }
 
-	if (recvd.equals("No")) {
-		client.print("Order not cancelled");
-	}	else {
-		client.print("Order Cancelled");
-	}	*/
+  if (recvd.equals("No")) {
+    client.print("Order not cancelled");
+  } else {
+    client.print("Order Cancelled");
+  } */
 }
 
 void orderDrink(WiFiClient client, String compare) {
   String sendBack = "Not Available";
-	String a = ""; // temp variable
+  String a = ""; // temp variable
 
-	// TODO: Need to fix later
-	if (drinkOrder.equals("")) {
-		a = "Hi";
-	} else {	
-		client.print("Wrong client");
-		return;
-	}
+  // TODO: Check if client can place an order
+  if (!drinkOrder.equals("")) { 
+    client.print("Wrong client");
+    return;
+  }
 
   if (compare.equals("Check Coca Cola")) {
     if (numCoke > 0) {
@@ -267,7 +279,7 @@ void orderDrink(WiFiClient client, String compare) {
       delay(1);
     }
 
-		String newreq = matchRequest(client);
+    String newreq = matchRequest(client);
 
     // Send response to client
     client.print("Delivering Order");

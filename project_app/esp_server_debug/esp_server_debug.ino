@@ -45,6 +45,25 @@ void setup() {
   Serial.println("Server started");
 }
 
+void WiFiReconnect() {
+  WiFi.disconnect(true);
+
+  Serial.print("Connecting to Wifi...");
+  /* You can remove the password parameter if you want the AP to be open. */
+  WiFi.begin("Imad", "36e03fvcy2c0n");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("WiFi Connected!");
+  Serial.println("IP Address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
+  
+}
 void loop() {
 
   // Check if STM is sending data
@@ -52,9 +71,14 @@ void loop() {
 
   // Check to see if WiFi is still connected. If it is, turn on LED
   if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("ON");
+    delay(1000);
     digitalWrite(pinLED, HIGH);
   } else {
+    Serial.println("OFF");
+    delay(1000);
     digitalWrite(pinLED, LOW);
+    WiFiReconnect();
   }
   
   // Check if a client has connected
