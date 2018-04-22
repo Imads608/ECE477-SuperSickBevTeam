@@ -42,6 +42,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -55,7 +56,6 @@ I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
-TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim9;
 TIM_HandleTypeDef htim10;
 
@@ -68,18 +68,10 @@ int fadeVal = 0;
 int fadeVal2 = 0;
 volatile int state = 0; //0 - Listening, 1 - Order Received, 2 - Drink Loaded, 3 - Destination Reached, 4 - Drop drink, 5 - Return
 int timerVal = 0;
-int loadlineIndex = 0;
-int loadlineCount = 0;
 // Manual/Autonomous Variables
 volatile int mode = 0; //0 - manual, 1 - autonomous
 volatile int PeriodCount = 0;
 volatile int OnCount = 0;
-volatile int IOCValue;
-volatile int ControlModeValue;
-volatile int AileronValue;
-volatile int ElevatorValue;
-volatile int ThrottleValue;
-volatile int RudderValue;
 //GPS Variables
 int Rx_indx;
 int GPS_Transfer_cplt = 0;
@@ -153,13 +145,11 @@ static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C2_Init(void);
-static void MX_TIM3_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_TIM9_Init(void);
 static void MX_TIM2_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-                                
                                 
                                 
                                 
@@ -187,7 +177,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     uint8_t j;
     uint8_t k;
 
-  // __disable_irq();
+    //HAL_NVIC_DisableIRQ(TIM1_UP_TIM10_IRQn);
 
     if (huart->Instance == USART1)
 	{
@@ -226,7 +216,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
     }
 
-   // __enable_irq();
+   // HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -234,57 +224,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	// autonomous/manual select channel interpretation
 	if (htim->Instance==TIM10)
 	{
-		//__disable_irq();
-		//idle message count
-	/*	if(loadlineCount++ == 50000){
-			loadlineCount = 0;
-			loadlineIndex = (loadlineIndex + 1) % 4;
-		}*/
+		//HAL_NVIC_DisableIRQ(USART2_IRQn);
 		//sample Manual/Autonomous toggle signal
 		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_4) == 1){
 			OnCount++;
 		}
-		//check counts vs values
-		/*if(PeriodCount < IOCValue){
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_SET);
-		}
-		else{
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_RESET);
-		}
-		if(PeriodCount < ControlModeValue){
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
-		}
-		else{
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
-		}
-		if(PeriodCount < AileronValue){
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
-		}
-		else{
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-		}
-		if(PeriodCount < ElevatorValue){
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_13, GPIO_PIN_SET);
-		}
-		else{
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_13, GPIO_PIN_RESET);
-		}
-		if(PeriodCount < ThrottleValue){
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
-		}
-		else{
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);
-		}
-		if(PeriodCount < RudderValue){
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
-		}
-		else{
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET);
-		}*/
 		//check if end of a period
-		if(PeriodCount++ == 735){
+		if(PeriodCount++ == 183){
 			//Set Mux Select Line
-			if(OnCount >= 50){
+			if(OnCount >= 14){
  				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);
  				mode = 1;
 			}
@@ -298,7 +246,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 
-	//__enable_irq();
+	//HAL_NVIC_EnableIRQ(USART2_IRQn);
 }
 
 /* USER CODE END 0 */
@@ -317,6 +265,8 @@ int main(void)
   char alt[16];
   double prevalt = 100000000;
   double maxalt = 0;
+  double minalt = 100000000;
+  int toggle = 0;
 
   /* USER CODE END 1 */
 
@@ -343,7 +293,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_I2C2_Init();
-  MX_TIM3_Init();
   MX_TIM10_Init();
   MX_TIM9_Init();
   MX_TIM2_Init();
@@ -371,25 +320,34 @@ int main(void)
   HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_2);
 
-  HAL_TIM_Base_Start_IT(&htim10);
-
   HAL_UART_Receive_IT(&huart1, &Rx1_data, 1);
   HAL_UART_Receive_IT(&huart2, &Rx_data, 1);
+
+  HAL_TIM_Base_Start_IT(&htim10);
+
+  HAL_NVIC_DisableIRQ(USART2_IRQn);
+  HAL_NVIC_DisableIRQ(TIM1_UP_TIM10_IRQn);
+
   //claw initializations
   __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 700); //PE5
   __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 700); //PE5
-  //flight controller signal initializations
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 140); //FC channel 1 (Aileron) pin PA8
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 140); //FC channel 2 (Elevator) pin PE 11
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 90); //FC channel 3 (Throttle) pin PE 13
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 140); //FC channel 4 (Rudder) pin PE 14
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 150); //FC channel 6 (IOC) pin PA 8
+  //FC initializations
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1 (Aileron) pin PE 14
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2 (Elevator) pin PE 13
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 3 (Throttle) pin PA 8
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 150); //FC channel 4 (Rudder) pin PE 11
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 150); //FC channel 6 (IOC) pin PA 1
+
+  HAL_NVIC_EnableIRQ(USART2_IRQn);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+
   while (1)
   {
 	  //GPS code
-	  currTime = HAL_GetTick();
+	 currTime = HAL_GetTick();
 
 	  if (currTime - prevTimeLED >= 1000) {
+		  toggle = 1;
 		  prevTimeLED = currTime;
 		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13);
 		  //HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
@@ -470,7 +428,7 @@ int main(void)
 		  }
 	  }
 
-	  else if (WiFi_Transfer_cplt)
+	  if (WiFi_Transfer_cplt)
 	  {
 		  WiFi_Transfer_cplt = 0;
 		  //LATITUDE
@@ -563,19 +521,19 @@ int main(void)
 	  case 0: //idle
 		  //default initializations, but should not be used until state 3
 		  ManualDeliveryInterupt = 0;
-		  //flight controller signals
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 140); //FC channel 1 (Aileron) pin PA8
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 140); //FC channel 2 (Elevator) pin PE 11
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 90); //FC channel 3 (Throttle) pin PE 13
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 140); //FC channel 4 (Rudder) pin PE 14
 
-		  if(StatePrint == 1 || (RMC.altitude != prevalt && RMC.altitude != 0)){
+		  if(StatePrint == 1 || (toggle == 1/*RMC.altitude < prevalt-1*/ && RMC.altitude != 0)){
+			  toggle = 0;
 			  if(StatePrint == 0){
 				  prevalt = RMC.altitude;
+				  if(RMC.altitude < prevalt){
+					  maxalt = RMC.altitude;
+				  }
+				  if(RMC.altitude > prevalt){
+					  minalt = RMC.altitude;
+				  }
 			  }
-			  if(RMC.altitude < prevalt){
-				  maxalt = RMC.altitude;
-			  }
+
 			  StatePrint = 0;
 			  lcd_clear();
 			  //lcd_firstLine();
@@ -628,7 +586,8 @@ int main(void)
 	  case 3: //ascend
 		  //save start location
 		  StartAltitude = RMC.altitude;
-		  //ThrottleValue = 68;
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 3 (Throttle) pin PA 8
+
 		  /* if mode == 0
 		   * 	ManualDeliveryInterupt = 1;
 		   * 	state = 7; descend state
@@ -639,15 +598,15 @@ int main(void)
 			  StatePrint = 0;
 		  	  lcd_clear();
 		  	  lcd_firstLine();
-		  	  lcd_print("Max Altitude");
+		  	  sprintf(alt, "%d", (int) minalt);
 		  	  lcd_secondLine();
 		  	  sprintf(alt, "%d", (int) maxalt);
 		  	  lcd_print(alt); //for test
 		   }
-		  /*if(mode == 0){
+		  if(mode == 0){
 			  StatePrint = 1;
-			  state = 5;
-		  }*/
+			  state = 0;
+		  }
 		  //go to descend state
 		   /*if(RMC.altitude <= StartAltitude - 5){
 			   StatePrint = 1;
@@ -695,12 +654,12 @@ int main(void)
 		   */
 		  break;
 	  case 7: //descend
-		  ThrottleValue = 52; //slow descent speed
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 130); //slow descent speed
 		  /* if mode == 0
 		   * 	ManualDeliveryInterupt = 1;
 		   */
 		   if(RMC.altitude >= StartAltitude - 1 || RMC.altitude <= StartAltitude + 1){
-		    	ThrottleValue = 36;
+			   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 90); //power down motors
 		   /* 	if ManualDeliveryInterrupt
 		   * 		print delivery was interrupted
 		   * 	else
@@ -713,13 +672,6 @@ int main(void)
 		    	}
 		   }
 		  break;
-	  default:
-		  //flight controller signal initializations
-		    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 140); //FC channel 1 (Aileron) pin PA8
-		    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 140); //FC channel 2 (Elevator) pin PE 11
-		    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 90); //FC channel 3 (Throttle) pin PE 13
-		    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 140); //FC channel 4 (Rudder) pin PE 14
-		    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 150); //FC channel 6 (IOC) pin PA 8
 	  }
 
   /* USER CODE END WHILE */
@@ -841,7 +793,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 1000;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 1830;
+  htim1.Init.Period = 1832;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
@@ -920,7 +872,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 500;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1830;
+  htim2.Init.Period = 1832;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
   {
@@ -944,48 +896,6 @@ static void MX_TIM2_Init(void)
   }
 
   HAL_TIM_MspPostInit(&htim2);
-
-}
-
-/* TIM3 init function */
-static void MX_TIM3_Init(void)
-{
-
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_OC_InitTypeDef sConfigOC;
-
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 198;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 5000;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  HAL_TIM_MspPostInit(&htim3);
 
 }
 
@@ -1014,6 +924,11 @@ static void MX_TIM9_Init(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
+  if (HAL_TIM_PWM_ConfigChannel(&htim9, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
   HAL_TIM_MspPostInit(&htim9);
 
 }
@@ -1025,7 +940,7 @@ static void MX_TIM10_Init(void)
   TIM_OC_InitTypeDef sConfigOC;
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 1250;
+  htim10.Init.Prescaler = 5000;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim10.Init.Period = 1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
