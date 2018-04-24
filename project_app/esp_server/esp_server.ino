@@ -24,11 +24,10 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
                              
   // Connect to WiFi network
-  /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("Imad", "36e03fvcy2c0n");
+  WiFi.begin("I have WiFi", "Anser123");
 
+  // Wait for a connection
   while (WiFi.status() != WL_CONNECTED) {
-    //delay(500);
     getUARTData();
   }
 
@@ -37,11 +36,13 @@ void setup() {
 }
 
 void WiFiReconnect() {
+  // Disconnect before reconnecting
   WiFi.disconnect(true);
 
-  /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("Imad", "36e03fvcy2c0n");
+  // Connect to WiFi network
+  WiFi.begin("I have WiFi", "Anser123");
 
+  // Wait for a connection
   while (WiFi.status() != WL_CONNECTED) {
     getUARTData();
   }
@@ -52,7 +53,7 @@ void loop() {
   // Check if STM is sending data
   getUARTData();
 
-  // Check to see if WiFi is still connected. If it is, turn on LED
+  // Check to see if WiFi is still connected. If it is, turn on LED otherwise reconnect
   if (WiFi.status() == WL_CONNECTED) {
     digitalWrite(LED_BUILTIN, LOW);
   } else {
@@ -70,7 +71,7 @@ void loop() {
   // Send initial response to client
   client.println("Hello Client. I am free to receive an order");
   
-  // Wait until the client sends drink request
+  // Wait until the client sends a request
   while(!client.available()){
     delay(1);
   }
@@ -78,6 +79,7 @@ void loop() {
   // Read the first line of the request
   String compare = matchRequest(client); 
 
+  // Check request
   if (compare.equals("Cancel Order")) {
     cancelDrink(client);
   } else if (compare.equals("Calc Update")){
@@ -95,6 +97,7 @@ void loop() {
 }
 
 void getUARTData() {
+  // Receive data from Microcontroller through UART if any
   char charValue;
   String strRecvd;
   int gotFlag = 0;
@@ -110,10 +113,10 @@ void getUARTData() {
 }
 
 String matchRequest(WiFiClient client) {
+  // Read and parse the request
   String req = client.readString();
   client.flush();
-  
-
+ 
   int startIndex = 2;
   int flag = 0;
   int temp = 0;

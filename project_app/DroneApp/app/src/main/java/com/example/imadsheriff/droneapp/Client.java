@@ -105,6 +105,8 @@ public class Client extends AsyncTask<String, Void, Void> {
                     status = "Delivering";
                 } else if (response.contains("Order Cancelled")) {
                     status = "Order Cancelled";
+                } else if (response.contains("Order not cancelled")) {
+                    status = "Order not cancelled";
                 } else if (response.contains("Got Initial Request")) {
                     status = "Request in progress";
 
@@ -173,6 +175,9 @@ public class Client extends AsyncTask<String, Void, Void> {
         } else if (status == "Order Cancelled") {
             myOrderActivity.showAlert("Order Update", "Your order has been cancelled");
             myOrderActivity.setOrderPlaced(false);
+        } else if (status.equals("Order not cancelled")) {
+            myOrderActivity.showAlert("Denied", "Order cannot be cancelled at the moment");
+            myOrderActivity.setOrderPlaced(true);
         } else if (status == "Stock Update finished") {
             myStockActivity.showAlert("Stock Update", "Successfully updated stock");
             devOn = false;

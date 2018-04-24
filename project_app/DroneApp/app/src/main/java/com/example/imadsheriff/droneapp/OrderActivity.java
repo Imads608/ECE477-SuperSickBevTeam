@@ -80,14 +80,16 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
 
     public void showInstructions() {
         String title = "Instructions";
-        String message = "1 - Select an order from the drop down menu\n" +
-                "2 - Once you are satisfied with your choice, place the order with the button located at the bottom.\n" +
-                "3 - Placing the order will automatically check with the vender to see whether it is available and will alert you\n" +
-                "4 - You will be notified once the order is placed. You are required to turn on your location so that the drone can deliver your beverage to you.\n" +
-                "5 - Please wait patiently until your drink arrives.\n" +
-                "6 - If you want to check what your current order is, you can click on the \"Check Current Order\" push button\n" +
-                "7 - You cannot place more than one order at one time. Please wait until your current order arrives.\n" +
-                "8 - Thanks for using our service!";
+        String message = "1 - Make sure you are connected to the Internet and have Location Services enabled\n" +
+                "2 - Have a ticket received from the club that has information on the IP Address and Port number to enter\n" +
+                "3 - Select the drink you want\n" +
+                "4 - Enter the IP Address and Port Number stated on the ticket received\n" +
+                "5 - Click on Send Order and wait until a notification is received stating whether the order is received\n" +
+                "6 - Please wait patiently until drink arrives\n" +
+                "7 - Click on \"Check Current\" to see the current order you placed\n" +
+                "8 - You can only place one order at a time\n" +
+                "9 - Cancelling your order is currently unavailable.\n" +
+                "10 - Thank you for using our service";
 
         showAlert(title, message);
 
@@ -238,12 +240,16 @@ public class OrderActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public void cancelCurrentOrder() {
-        if (isOrderPlaced == false) {
+        showAlert("Unavailable", "Sorry this service is currently unavailable");
+        return;
+
+        /** Future Update **/
+        /*if (isOrderPlaced == false) {
             showAlert("Denied", "You don't have an order placed to cancel");
             return;
         }
 
-        clientSetup("Cancel Order");
+        clientSetup("Cancel Order");*/
     }
 
     public void placeUserOrder() {
