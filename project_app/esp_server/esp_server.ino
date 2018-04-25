@@ -24,7 +24,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
                              
   // Connect to WiFi network
-  WiFi.begin("I have WiFi", "*******");
+  WiFi.begin("I have WiFi", "Anser123");
 
   // Wait for a connection
   while (WiFi.status() != WL_CONNECTED) {
