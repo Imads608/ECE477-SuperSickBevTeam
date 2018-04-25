@@ -1,11 +1,11 @@
 #include <ESP8266WiFi.h>
 
 // Drinks Available
-int numCoke = 0;
-int numMelloYello = 0;
-int numRootBeer = 0;
-int numFanta = 0;
-int numSprite = 0;
+int numCoke = 10;
+int numMelloYello = 10;
+int numRootBeer = 10;
+int numFanta = 10;
+int numSprite = 10;
 String drinkOrder = "";
 
 int pinLED = 2;
@@ -19,12 +19,9 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 
-  //Set Pin Modes
-  pinMode(LED_BUILTIN, OUTPUT); 
-  digitalWrite(LED_BUILTIN, HIGH);
                              
   // Connect to WiFi network
-  WiFi.begin("I have WiFi", "*******");
+  WiFi.begin("I have WiFi", "Anser123");
 
   // Wait for a connection
   while (WiFi.status() != WL_CONNECTED) {
@@ -54,10 +51,7 @@ void loop() {
   getUARTData();
 
   // Check to see if WiFi is still connected. If it is, turn on LED otherwise reconnect
-  if (WiFi.status() == WL_CONNECTED) {
-    digitalWrite(LED_BUILTIN, LOW);
-  } else {
-    digitalWrite(LED_BUILTIN, HIGH);
+  if (WiFi.status() != WL_CONNECTED) {
     WiFiReconnect();
   }
   

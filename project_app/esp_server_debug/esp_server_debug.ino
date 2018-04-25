@@ -27,7 +27,7 @@ void setup() {
   Serial.println();
   Serial.print("Connecting to Wifi...");
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("Imad", "36e03fvcy2c0n");
+  WiFi.begin("I have WiFi", "Anser123");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -305,19 +305,15 @@ void orderDrink(WiFiClient client, String compare) {
     }
 
 		String newreq = matchRequest(client);
-		/*
-    String newreq = client.readString();
-    client.flush();
-    Serial.print("GPS: ");
-    Serial.println(newreq);
-    */
 
     // Send response to client
     client.print("Delivering Order");
-    //String sendOrder = drinkOrder + "," + newreq + "\r";
     String sendOrder = newreq + "," + drinkOrder + ",\r";
-		//Serial.write(sendOrder);
-    Serial.println("Sending Order");
+    char sendData[40];
+    sendOrder.toCharArray(sendData, 40);
+    Serial.write(sendData);
+    Serial.println(sendOrder);
+    Serial.println("DSDSS");
   }
 
 }
