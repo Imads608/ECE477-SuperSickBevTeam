@@ -21,7 +21,7 @@ void setup() {
 
                              
   // Connect to WiFi network
-  WiFi.begin("I have WiFi", "Anser123");
+  WiFi.begin("I have WiFi", "*****");
 
   // Wait for a connection
   while (WiFi.status() != WL_CONNECTED) {
@@ -37,7 +37,7 @@ void WiFiReconnect() {
   WiFi.disconnect(true);
 
   // Connect to WiFi network
-  WiFi.begin("I have WiFi", "Anser123");
+  WiFi.begin("I have WiFi", "******s");
 
   // Wait for a connection
   while (WiFi.status() != WL_CONNECTED) {

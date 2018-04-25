@@ -27,7 +27,7 @@ void setup() {
   Serial.println();
   Serial.print("Connecting to Wifi...");
   /* You can remove the password parameter if you want the AP to be open. */
-  WiFi.begin("I have WiFi", "Anser123");
+  WiFi.begin("I have WiFi", "******");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
