@@ -55,7 +55,6 @@ I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim9;
 TIM_HandleTypeDef htim10;
 
@@ -94,10 +93,11 @@ uint8_t Rx1_data;
 int Rx1_indx;
 char Rx1_Buffer[40];
 char targetLatDeg[3];
-char targetLatMin[8];
+char targetLatMin[9];
 char targetLongDeg[3];
-char targetLongMin[8];
+char targetLongMin[9];
 int order_received = 0;
+int firstTransfer = 0;
 
 unsigned long prevTimeLED;
 unsigned long prevTimeLCD;
@@ -147,10 +147,8 @@ static void MX_USART2_UART_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_TIM9_Init(void);
-static void MX_TIM2_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-                                
                                 
                                 
 
@@ -224,7 +222,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	// autonomous/manual select channel interpretation
 	if (htim->Instance==TIM10)
 	{
-		//HAL_NVIC_DisableIRQ(USART2_IRQn);
 		//sample Manual/Autonomous toggle signal
 		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_4) == 1){
 			OnCount++;
@@ -245,8 +242,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			OnCount = 0;
 		}
 	}
-
-	//HAL_NVIC_EnableIRQ(USART2_IRQn);
 }
 
 /* USER CODE END 0 */
@@ -259,14 +254,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  int ManualDeliveryInterupt = 0;
-  double StartAltitude = 0;
+  double StartLongitude = 0;
+  double StartLatitude = 0;
+  double TargetLongitude = 54.793;
+  double TargetLatitude = 25.'';
+  double CurrentLongitude = 0;
+  double CurrentLatitude = 0;
+  double WEdistance = 0;
+  double NSdistance = 0;
+  double speed = 0;
+  char temp1[16] = "aaahhhh nooo!";
+  char temp2[16] = "uninitialized";
   int StatePrint = 1;
-  char alt[16];
-  double prevalt = 100000000;
-  double maxalt = 0;
-  double minalt = 100000000;
   int toggle = 0;
+  int counter = 0;
+  int altitudeTime = 4;
 
   /* USER CODE END 1 */
 
@@ -295,7 +297,6 @@ int main(void)
   MX_I2C2_Init();
   MX_TIM10_Init();
   MX_TIM9_Init();
-  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   lcd_init();
 
@@ -316,7 +317,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+  //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_2);
 
@@ -325,19 +326,21 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(&htim10);
 
+  HAL_NVIC_DisableIRQ(USART1_IRQn);
   HAL_NVIC_DisableIRQ(USART2_IRQn);
   HAL_NVIC_DisableIRQ(TIM1_UP_TIM10_IRQn);
 
   //claw initializations
   __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 700); //PE5
-  __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 700); //PE5
+  __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 700); //PE6
   //FC initializations
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1 (Aileron) pin PE 14
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2 (Elevator) pin PE 13
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 3 (Throttle) pin PA 8
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 150); //FC channel 4 (Rudder) pin PE 11
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 150); //FC channel 6 (IOC) pin PA 1
+  //__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 150); //FC channel 6 (IOC) pin PA 1
 
+  HAL_NVIC_EnableIRQ(USART1_IRQn);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
   HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
 
@@ -347,10 +350,10 @@ int main(void)
 	 currTime = HAL_GetTick();
 
 	  if (currTime - prevTimeLED >= 1000) {
+		  counter += 1;
 		  toggle = 1;
 		  prevTimeLED = currTime;
 		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13);
-		  //HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 	  }
 
 	  if (GPS_Transfer_cplt) {
@@ -371,7 +374,7 @@ int main(void)
 		  {
 			  RMC.fixStatus = GPS_Data[11];
 
-			  if (RMC.fixStatus == 'V') {
+			  if (RMC.fixStatus != 'A') {
 					//  lcd_clear();
 					//  lcd_print("NO GPS FIX");
 			  }
@@ -404,31 +407,9 @@ int main(void)
 				  RMC.Longitude.orientation = GPS_Data[36];
 			  }
 		  }
-
-		  else if (strcmp(CoordinateType, "$GPGGA") == 0)
-		  {
-			  int a = 46;
-			  int b = 0;
-
-			  if (RMC.fixStatus == 'V') {
-				// lcd_clear();
-				 // lcd_print("NO GPS FIX");
-			  }
-			  else {
-
-				  while(GPS_Data[a] != ','){
-					  altitudeBuff[b] = GPS_Data[a];
-					  a++;
-					  b++;
-				  }
-				  altitudeBuff[b] = '\0';
-
-				  RMC.altitude = atof(altitudeBuff);
-			  }
-		  }
 	  }
 
-	  if (WiFi_Transfer_cplt)
+	  if (WiFi_Transfer_cplt && state == 0)
 	  {
 		  WiFi_Transfer_cplt = 0;
 		  //LATITUDE
@@ -445,8 +426,6 @@ int main(void)
 		  else
 		  {
 			  WiFi.orderCancelled = 1;
-			  lcd_clear();
-			  lcd_print("Drink Cancelled");
 		  }
 
 		  if (WiFi.orderCancelled == 0)
@@ -459,44 +438,47 @@ int main(void)
 			  WiFi.Latitude.degrees = atoi(targetLatDeg);
 
 			  //Latitude decimalMin
-			  targetLatMin[0] = Rx1_Buffer[4];
-			  targetLatMin[1] =Rx1_Buffer[5];
-			  targetLatMin[2] = '.';
-			  targetLatMin[3] = Rx1_Buffer[6];
-			  targetLatMin[4] = Rx1_Buffer[7];
-			  targetLatMin[5] = Rx1_Buffer[8];
-			  targetLatMin[6] = Rx1_Buffer[9];
-			  targetLatMin[7] = '\0';
+
+			  targetLatMin[0] = '0';
+			  targetLatMin[1] = '.';
+			  targetLatMin[2] = Rx1_Buffer[4];
+			  targetLatMin[3] = Rx1_Buffer[5];
+			  targetLatMin[4] = Rx1_Buffer[6];
+			  targetLatMin[5] = Rx1_Buffer[7];
+			  targetLatMin[6] = Rx1_Buffer[8];
+			  targetLatMin[7] = Rx1_Buffer[9];
+			  targetLatMin[8] = '\0';
 
 			  WiFi.Latitude.decimalMin = atof(targetLatMin);
 
 
 			  //LONGITUDE
-			  if (Rx1_Buffer[13] == '+')
+			  if (Rx1_Buffer[12] == '+')
 			  {
 				WiFi.Longitude.orientation = 'E';
 			  }
-			  else if (Rx1_Buffer[13] == '-')
+			  else if (Rx1_Buffer[12] == '-')
 			  {
 				WiFi.Longitude.orientation = 'W';
 			  }
 
 			  //Longitude Degrees
-			  targetLongDeg[0] = Rx1_Buffer[14];
-			  targetLatDeg[1] = Rx1_Buffer[15];
-			  targetLatDeg[2] = '\0';
+			  targetLongDeg[0] = Rx1_Buffer[13];
+			  targetLongDeg[1] = Rx1_Buffer[14];
+			  targetLongDeg[2] = '\0';
 
 			  WiFi.Longitude.degrees = atoi(targetLongDeg);
 
 			  //Longitude decimalMin
-			  targetLongMin[0] = Rx1_Buffer[17];
-			  targetLongMin[1] = Rx1_Buffer[18];
-			  targetLongMin[2] = '.';
-			  targetLongMin[3] = Rx1_Buffer[19];
-			  targetLongMin[4] = Rx1_Buffer[20];
-			  targetLongMin[5] = Rx1_Buffer[21];
-			  targetLongMin[6] = Rx1_Buffer[22];
-			  targetLongMin[7] = '\0';
+			  targetLongMin[0] = '0';
+			  targetLongMin[1] = '.';
+			  targetLongMin[2] = Rx1_Buffer[16];
+			  targetLongMin[3] = Rx1_Buffer[17];
+			  targetLongMin[4] = Rx1_Buffer[18];
+			  targetLongMin[5] = Rx1_Buffer[19];
+			  targetLongMin[6] = Rx1_Buffer[20];
+			  targetLongMin[7] = Rx1_Buffer[21];
+			  targetLongMin[8] = '\0';
 
 			  WiFi.Longitude.decimalMin = atof(targetLongMin);
 
@@ -516,42 +498,22 @@ int main(void)
 		  }
 	  }
 
+
   	  //Drone States code
 	  switch(state){
 	  case 0: //idle
-		  //default initializations, but should not be used until state 3
-		  ManualDeliveryInterupt = 0;
-
-		  if(StatePrint == 1 || (toggle == 1/*RMC.altitude < prevalt-1*/ && RMC.altitude != 0)){
-			  toggle = 0;
-			  if(StatePrint == 0){
-				  prevalt = RMC.altitude;
-				  if(RMC.altitude < prevalt){
-					  maxalt = RMC.altitude;
-				  }
-				  if(RMC.altitude > prevalt){
-					  minalt = RMC.altitude;
-				  }
-			  }
-
+		  if(StatePrint == 1){
 			  StatePrint = 0;
 			  lcd_clear();
-			  //lcd_firstLine();
-			  lcd_print("Altitude"); //for test
+			  lcd_print("Waiting for New");
 			  lcd_secondLine();
-		  	  sprintf(alt, "%d", (int) prevalt);
-		  	  lcd_print(alt); //for test
+			  lcd_print("Drink Request");
 		  }
-		  //for testing ascend descend
-		  if(mode == 1){
-			  //lcd_print("test");
+		  if (order_received == 1) {
 			  StatePrint = 1;
-			  state = 3;
+			  state = 1;
+			  counter = 0;
 		  }
-		 /* if(order_received){
-			StatePrint = 1;
-		   	state = 1;
-	  	  }*/
 		  break;
 	  case 1: // order received
 		  if(StatePrint == 1){
@@ -560,117 +522,340 @@ int main(void)
 		  	lcd_print("Order Received!"); //also display which drink
 		  	lcd_secondLine();
 		  	lcd_print(WiFi.drinkOrder);	//Drink order!!
-		  }
-		 if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15) == 0) {
+		  	//save target location
+		  	TargetLongitude = WiFi.Longitude.decimalMin * 60;
+		  	TargetLatitude = WiFi.Latitude.decimalMin * 60;
+		 }
+		 if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15) == 0  && counter >= 2){
 			//close claw
-			__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 460);
-			__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 940);
+			 __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 920);
+			 __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 480);
 			StatePrint = 1;
 		   	state = 2;
+		   	counter = 0;
 		  }
 		  break;
 	  case 2: //order complete
-		  if(StatePrint == 1){
+		  if(StatePrint == 1 && counter >= 1){
+
+			sprintf(temp1, "%d", (int) TargetLongitude);
+			sprintf(temp2, "%d", (int) TargetLatitude);
 		  	StatePrint = 0;
 		  	lcd_clear();
-		  	lcd_print("Payload loaded! ");
+		  	lcd_print(temp1); //Payload loaded!
 		  	lcd_secondLine();
-		  	lcd_print("Position & Start");
+		  	lcd_print(temp2); //Position & Start
 		  }
 		  //start ascent if mode is autonomous
 		  if(mode == 1){
+			  counter = 0;
 			  StatePrint = 1;
 			  state = 3;
 		  }
 		  break;
 	  case 3: //ascend
-		  //save start location
-		  StartAltitude = RMC.altitude;
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 3 (Throttle) pin PA 8
-
-		  /* if mode == 0
-		   * 	ManualDeliveryInterupt = 1;
-		   * 	state = 7; descend state
-		   */
-
-		  if(StatePrint == 1 /*|| (RMC.altitude >= curralt || RMC.altitude < curralt - 1*/){
-			  //curralt = RMC.altitude;
+		  if(StatePrint == 1){
 			  StatePrint = 0;
 		  	  lcd_clear();
-		  	  lcd_firstLine();
-		  	  sprintf(alt, "%d", (int) minalt);
+		  	  lcd_print("2 infinity &&");
 		  	  lcd_secondLine();
-		  	  sprintf(alt, "%d", (int) maxalt);
-		  	  lcd_print(alt); //for test
-		   }
-		  if(mode == 0){
-			  StatePrint = 1;
-			  state = 0;
+		  	  lcd_print("Beyond!");
 		  }
-		  //go to descend state
-		   /*if(RMC.altitude <= StartAltitude - 5){
-			   StatePrint = 1;
-		       //state = 4;
-		       state = 7;
-		   }*/
+		  //save start location
+		  StartLongitude = RMC.Longitude.decimalMin;
+		  StartLatitude = RMC.Latitude.decimalMin;
+		  if(counter < altitudeTime){
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 170); //FC channel 3 (Throttle) pin PA 8
+		  }
+		  else if(counter < altitudeTime + 3){
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 3 (Throttle) pin PA 8
+		  }
+		  else{
+			  counter = 0;
+			  StatePrint = 1;
+			  state = 4;
+		  }
 		  break;
 	  case 4: //go to target
-		  //fly towards target directional input
-		  /* if(target.longitude == currLocation.longitude)
-		   * if(target.lattitdue == currLocation.lattitude)
-		   * if(target.longitude < currLocation.longitude && target.lattitude < currLocation.lattitude) //SW quad
-		   * if(target.longitude < currLocation.longitude && target.tattidud
-		   */
-		  /* if mode == 0
-		   * 	ManualDeliveryInterupt = 1;
-		   * 	state = 6; return to start state
-		   * if near enough to target
-		   * 	state = 5;
-		   */
+		  CurrentLongitude = RMC.Longitude.decimalMin;
+		  CurrentLatitude = RMC.Latitude.decimalMin;
+		  //set speed
+		  if(CurrentLongitude >= TargetLongitude - 0.015 && CurrentLongitude <= TargetLongitude + 0.015 && CurrentLatitude >= TargetLatitude - 0.015 && CurrentLatitude <= TargetLatitude + 0.015){
+			  speed = 0.5;
+		  }
+		  else{
+			  speed = 1;
+		  }
+		  //calculate directional input to target location
+		  if(!(CurrentLongitude >= TargetLongitude - 0.0025 && CurrentLongitude <= TargetLongitude + 0.0025 && CurrentLatitude >= TargetLatitude - 0.0025 && CurrentLatitude <= TargetLatitude + 0.0025)){
+			  WEdistance = TargetLongitude - CurrentLongitude;
+			  NSdistance = TargetLatitude - CurrentLatitude;
+			  if(NSdistance >= -0.0025 && NSdistance <= 0.0025 && WEdistance > 0){ //W
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed)); //FC channel 1
+				  sprintf(temp1, "%d", 150);
+				  sprintf(temp2, "%d", (int)(150 - 20 * speed));
+			  }
+			  else if(NSdistance >= -0.0025 && NSdistance <= 0.0025 && WEdistance < 0){ //E
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed)); //FC channel 1
+				  sprintf(temp1, "%d", 150);
+				  sprintf(temp2, "%d", (int)(150 + 20 * speed));
+			  }
+			  else if(NSdistance > 0 && WEdistance >= -0.0025 && WEdistance <= 0.0025){ //N
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed)); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1
+				  sprintf(temp1, "%d", (int) 150);
+				  sprintf(temp2, "%d", 150);
+
+			  }
+			  else if(NSdistance < 0 && WEdistance >= -0.0025 && WEdistance <= 0.0025){ //S
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed)); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1
+				  sprintf(temp1, "%d", (int)(150 - 20 * speed));
+				  sprintf(temp2, "%d", 150);
+			  }
+			  else if(NSdistance > 0 && WEdistance > 0){ //NW Quadrant
+				  if(NSdistance > WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed)); //FC channel 2 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed * WEdistance / NSdistance)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed * WEdistance / NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed * NSdistance / WEdistance)); //FC channel 1 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed * NSdistance / WEdistance));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed));
+				  }
+		      }
+			  else if(NSdistance > 0 && WEdistance < 0){ //NE Quadrant
+				  if(NSdistance > -WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed)); //FC channel 2 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed * -WEdistance / NSdistance)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed * -WEdistance / NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed * NSdistance / -WEdistance)); //FC channel 1 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed * NSdistance / -WEdistance));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed));
+				  }
+		      }
+			  else if(NSdistance < 0 && WEdistance > 0){ //SW Quadrant
+				  if(-NSdistance > WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed)); //FC channel 2 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed * WEdistance / -NSdistance)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed * WEdistance / -NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed * -NSdistance / WEdistance)); //FC channel 1 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed * -NSdistance / WEdistance));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed));
+				  }
+		      }
+			  else if(NSdistance < 0 && WEdistance < 0){ //SE Quadrant
+				  if(-NSdistance > -WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed)); //FC channel 2 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed * -WEdistance / -NSdistance)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed * -WEdistance / -NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed * -NSdistance / -WEdistance)); //FC channel 1 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed * -NSdistance / -WEdistance));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed));
+				  }
+		      }
+		  }
+		  //at target location
+		  else{
+			  counter = 0;
+			  StatePrint = 1;
+			  state = 5;
+		  }
+		  if(toggle == 1){
+			  toggle = 0;
+		  	  lcd_clear();
+		  	  lcd_print(temp1);
+		  	  lcd_secondLine();
+		  	  lcd_print(temp2);
+		  }
 		  break;
 	  case 5: //release
-		  //hover signals
-		  /*AileronValue = 60;
-		  ElevatorValue = 60;
-		  ThrottleValue = 60;
-		  RudderValue = 60;*/
-		 // if(mode == 0){
-			__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 360);
-			__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 700);
+		  if(StatePrint == 1){
+			  StatePrint = 0;
+			  lcd_clear();
+			  lcd_print("releasing");
+			  lcd_secondLine();
+			  lcd_print("payload!");
+		  }
 
-		 // }
-		  /* if mode == 0
-		   * 	ManualDeliveryInterupt = 1;
-		   * 	state = return to start state;
-		   * if can released
-		   * 	state = 6;
-		   */
+		  //hover signals
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1 (Aileron)
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2 (Elevator)
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 2 (Throttle)
+		  //claw release
+			 __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 600);
+			 __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 420);
+		  if(counter >= 7){
+			  TargetLongitude = StartLongitude;
+			  TargetLatitude = StartLatitude;
+			  counter = 0;
+			  StatePrint = 1;
+			  state = 6;
+		  }
 		  break;
 	  case 6: //return to start location
-		  /* if mode == 0
-		   * 	ManualDeliveryInterupt = 1;
-		   * if current location within range of start location
-		   * 	state = 7;
-		   */
+		  CurrentLongitude = RMC.Longitude.decimalMin;
+		  CurrentLatitude = RMC.Latitude.decimalMin;
+		  //set speed
+		  if(CurrentLongitude >= TargetLongitude - 0.015 && CurrentLongitude <= TargetLongitude + 0.015 && CurrentLatitude >= TargetLatitude - 0.015 && CurrentLatitude <= TargetLatitude + 0.015){
+			  speed = 0.5;
+		  }
+		  else{
+			  speed = 1;
+		  }
+		  //calculate directional input to target location
+		  if(!(CurrentLongitude >= TargetLongitude - 0.0025 && CurrentLongitude <= TargetLongitude + 0.0025 && CurrentLatitude >= TargetLatitude - 0.0025 && CurrentLatitude <= TargetLatitude + 0.0025)){
+			  WEdistance = TargetLongitude - CurrentLongitude;
+			  NSdistance = TargetLatitude - CurrentLatitude;
+			  if(NSdistance >= -0.0025 && NSdistance <= 0.0025 && WEdistance > 0){ //W
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed)); //FC channel 1
+				  sprintf(temp1, "%d", 150);
+				  sprintf(temp2, "%d", (int)(150 - 20 * speed));
+			  }
+			  else if(NSdistance >= -0.0025 && NSdistance <= 0.0025 && WEdistance < 0){ //E
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed)); //FC channel 1
+				  sprintf(temp1, "%d", 150);
+				  sprintf(temp2, "%d", (int)(150 + 20 * speed));
+			  }
+			  else if(NSdistance > 0 && WEdistance >= -0.0025 && WEdistance <= 0.0025){ //N
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed)); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1
+				  sprintf(temp1, "%d", (int) 150);
+				  sprintf(temp2, "%d", 150);
+
+			  }
+			  else if(NSdistance < 0 && WEdistance >= -0.0025 && WEdistance <= 0.0025){ //S
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed)); //FC channel 2
+				  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1
+				  sprintf(temp1, "%d", (int)(150 - 20 * speed));
+				  sprintf(temp2, "%d", 150);
+			  }
+			  else if(NSdistance > 0 && WEdistance > 0){ //NW Quadrant
+				  if(NSdistance > WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed)); //FC channel 2 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed * WEdistance / NSdistance)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed * WEdistance / NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed * NSdistance / WEdistance)); //FC channel 1 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed * NSdistance / WEdistance));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed));
+				  }
+		      }
+			  else if(NSdistance > 0 && WEdistance < 0){ //NE Quadrant
+				  if(NSdistance > -WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed)); //FC channel 2 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed * -WEdistance / NSdistance)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed * -WEdistance / NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 + 20 * speed * NSdistance / -WEdistance)); //FC channel 1 set North
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 + 20 * speed * NSdistance / -WEdistance));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed));
+				  }
+		      }
+			  else if(NSdistance < 0 && WEdistance > 0){ //SW Quadrant
+				  if(-NSdistance > WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed)); //FC channel 2 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed * WEdistance / -NSdistance)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed * WEdistance / -NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed * -NSdistance / WEdistance)); //FC channel 1 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 - 20 * speed)); //FC channel 1 set West
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed * -NSdistance / WEdistance));
+					  sprintf(temp2, "%d", (int)(150 - 20 * speed));
+				  }
+		      }
+			  else if(NSdistance < 0 && WEdistance < 0){ //SE Quadrant
+				  if(-NSdistance > -WEdistance){ //NS is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed)); //FC channel 2 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed * -WEdistance / -NSdistance)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed * -WEdistance / -NSdistance));
+				  }
+				  else{ //WE is larger
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (int)(150 - 20 * speed * -NSdistance / -WEdistance)); //FC channel 1 set South
+					  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (int)(150 + 20 * speed)); //FC channel 1 set East
+					  sprintf(temp1, "%d", (int)(150 - 20 * speed * -NSdistance / -WEdistance));
+					  sprintf(temp2, "%d", (int)(150 + 20 * speed));
+				  }
+		      }
+		  }
+		  //at target location
+		  else{
+			  counter = 0;
+			  StatePrint = 1;
+			  state = 7;
+		  }
+		  if(toggle == 1){
+			  toggle = 0;
+		  	  lcd_clear();
+		  	  lcd_print(temp1);
+		  	  lcd_secondLine();
+		  	  lcd_print(temp2);
+		  }
 		  break;
 	  case 7: //descend
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 130); //slow descent speed
-		  /* if mode == 0
-		   * 	ManualDeliveryInterupt = 1;
-		   */
-		   if(RMC.altitude >= StartAltitude - 1 || RMC.altitude <= StartAltitude + 1){
-			   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 90); //power down motors
-		   /* 	if ManualDeliveryInterrupt
-		   * 		print delivery was interrupted
-		   * 	else
-		   * 		print order complete
-		   */
-		    	if(StatePrint == 1){
-		    		StatePrint = 0;
-		    		lcd_clear();
-		    		lcd_print("Ta Daaa!");
-		    	}
+		  if(StatePrint == 1){
+			  StatePrint = 0;
+			  lcd_clear();
+			  lcd_print("descending");
+			  lcd_secondLine();
+			  lcd_print("state");
 		   }
+		  //hover signals
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1 (Aileron)
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2 (Elevator)
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //FC channel 2 (Throttle)
+		   if(counter < 3){
+			   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150); //hover
+		   }
+		   else if(counter < altitudeTime + 2){
+			   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 135); //safe descent speed
+		   }
+		   else {
+			   StatePrint = 1;
+			   state = 8;
+		   }
+		  break;
+	  case 8: //power down state
+		  //power down motors
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 90);
+		  //hover signals
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 150); //FC channel 1 (Aileron) pin PE 14
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150); //FC channel 2 (Elevator) pin PE 13
+		  if(StatePrint == 1){
+			  StatePrint = 0;
+		  	  lcd_clear();
+		  	  lcd_print("Delivery");
+		  	  lcd_secondLine();
+		  	  lcd_print("Complete!");
+		  }
 		  break;
 	  }
 
@@ -862,43 +1047,6 @@ static void MX_TIM1_Init(void)
 
 }
 
-/* TIM2 init function */
-static void MX_TIM2_Init(void)
-{
-
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_OC_InitTypeDef sConfigOC;
-
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 500;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1832;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  HAL_TIM_MspPostInit(&htim2);
-
-}
-
 /* TIM9 init function */
 static void MX_TIM9_Init(void)
 {
@@ -1023,7 +1171,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_5, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);
@@ -1034,17 +1182,17 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
 
+  /*Configure GPIO pins : PA1 PA5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PA4 */
   GPIO_InitStruct.Pin = GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PC4 */
