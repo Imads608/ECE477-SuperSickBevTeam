@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -83,6 +84,8 @@ char latMinBuff[8]; // "XX.XXXX\0"
 char longDegBuff[4]; // "XX\0"
 char longMinBuff[8]; // "XX.XXXX\0"
 char altitudeBuff[6];
+
+double startAltitude = 0;
 
 int j = 0;
 int k = 0;
@@ -257,7 +260,7 @@ int main(void)
   double StartLongitude = 0;
   double StartLatitude = 0;
   double TargetLongitude = 54.793;
-  double TargetLatitude = 25.'';
+  double TargetLatitude = 25.573;
   double CurrentLongitude = 0;
   double CurrentLatitude = 0;
   double WEdistance = 0;
@@ -407,6 +410,28 @@ int main(void)
 				  RMC.Longitude.orientation = GPS_Data[36];
 			  }
 		  }
+
+		  else if (strcmp(CoordinateType, "$GPGGA") == 0)
+		{
+			int a = 46;
+			int b = 0;
+
+			if (RMC.fixStatus != 'A') {
+//				lcd_clear();
+//				lcd_print("NO GPS FIX");
+			}
+			else {
+
+				while(GPS_Data[a] != ',' && (b < 6)) {
+					altitudeBuff[b] = GPS_Data[a];
+					a++;
+					b++;
+				}
+				altitudeBuff[b] = '\0';
+
+				RMC.altitude = atof(altitudeBuff);
+			}
+		}
 	  }
 
 	  if (WiFi_Transfer_cplt && state == 0)
@@ -505,15 +530,25 @@ int main(void)
 		  if(StatePrint == 1){
 			  StatePrint = 0;
 			  lcd_clear();
-			  lcd_print("Waiting for New");
-			  lcd_secondLine();
-			  lcd_print("Drink Request");
+			  //lcd_print("Waiting for New");
+			  lcd_print("ALTITUDE TEST");
+			  //lcd_secondLine();
+			  //lcd_print("Drink Request");
 		  }
-		  if (order_received == 1) {
-			  StatePrint = 1;
-			  state = 1;
-			  counter = 0;
+		  if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15) == 0  && counter >= 2){
+			//close claw
+//			 __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 920);
+//			 __HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 480);
+			startAltitude = RMC.altitude;
+			StatePrint = 1;
+			state = 9;
+			counter = 0;
 		  }
+//		  if (order_received == 1) {
+//			  StatePrint = 1;
+//			  state = 1;
+//			  counter = 0;
+//		  }
 		  break;
 	  case 1: // order received
 		  if(StatePrint == 1){
@@ -542,9 +577,9 @@ int main(void)
 			sprintf(temp2, "%d", (int) TargetLatitude);
 		  	StatePrint = 0;
 		  	lcd_clear();
-		  	lcd_print(temp1); //Payload loaded!
+		  	lcd_print("Payload Loaded!"); //Payload loaded!
 		  	lcd_secondLine();
-		  	lcd_print(temp2); //Position & Start
+		  	lcd_print("Position & Start"); //Position & Start
 		  }
 		  //start ascent if mode is autonomous
 		  if(mode == 1){
@@ -855,6 +890,21 @@ int main(void)
 		  	  lcd_print("Delivery");
 		  	  lcd_secondLine();
 		  	  lcd_print("Complete!");
+		  }
+		  break;
+	  case 9:
+		  if (abs(RMC.altitude - startAltitude) > 5)
+		  {
+			  if (StatePrint == 1)
+			  {
+				  StatePrint = 0;
+				  sprintf(temp2, "%d", (int)(abs(RMC.altitude - startAltitude)));
+				  lcd_clear();
+				  lcd_print("Max height received");
+				  lcd_secondLine();
+				  lcd_print("Height: ");
+				  lcd_print(temp2);
+			  }
 		  }
 		  break;
 	  }
